@@ -16,12 +16,12 @@ Or clone this repository and run `pip install -e` inside the cloned directory.
 ## Usage examples
 After installation, you will have access to the `miauth` command line interface (cli):
 
+1. Register / pair with device via Mi EC protocol (generates 'mi_token' file):
+`miauth <device_mac> --register`
+1. Login and retrieve serial number and firmware version via Mi EC protocol:
+`miauth -s -v <device_mac>`
 1. Authenticate and retrieve serial number and firmware version via (legacy) Nb protocol:
-`miauth -s -v <device_mac> nb`
-2. Register / pair with device via Mi EC protocol (generates 'mi_token' file):
-`miauth <device_mac> mi --register`
-3. Login and retrieve serial number and firmware version via Mi EC protocol:
-`miauth -s <device_mac> mi`
+`miauth --nb -s -v <device_mac>`
 
 For a full list of the possible commands run `miauth -h`.
 

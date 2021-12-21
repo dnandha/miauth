@@ -27,18 +27,16 @@ from miauth.nb.nbcrypto import NbCrypto
 
 parser = argparse.ArgumentParser()
 parser.add_argument("mac", help="mac address of target device")
+parser.add_argument("-n", "--nb", action='store_true', help="use Nb protocol instead")
 parser.add_argument("-c", "--command", help="send command (w/o checksum) to uart and print reply")
 parser.add_argument("-s", "--serial", action='store_true', help="retrieve serial number")
 parser.add_argument("-v", "--version", action='store_true', help="retrieve firmware version")
 parser.add_argument("-d", "--debug", action='store_true', help="activate debug log")
 
-subparsers = parser.add_subparsers(dest="proto", required=True)
-parser_nb = subparsers.add_parser("nb", help="use Nb protocol")
-parser_mi = subparsers.add_parser("mi", help="use Mi protocol")
-parser_mi.add_argument("-r", "--register", action='store_true',
-                       help="register with device / create token (caution: will lose bond to all other apps)")
-parser_mi.add_argument("-t", "--token_file", default="./mi_token",
-                       help="path to mi token file (default: ./mi_token)")
+parser.add_argument("-r", "--register", action='store_true',
+                    help="register with device / create token (caution: will lose bond to all other apps)")
+parser.add_argument("-t", "--token_file", default="./mi_token",
+                    help="path to mi token file (default: ./mi_token)")
 
 args = parser.parse_args()
 
@@ -113,9 +111,9 @@ Caution: After registration this device will lose coupling to all other apps (re
 
 
 def main():
-    if args.proto == "nb":
+    if args.nb == "nb":
         nb_main()
-    elif args.proto == "mi":
+    else:
         mi_main()
 
 
