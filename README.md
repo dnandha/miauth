@@ -1,11 +1,7 @@
 # Xiaomi Mi / Nb BLE client
-Many great apps stopped working because of protocol changes in the Xiaomi BLE communication.
-I found only very few apps that were able to perform pairing like in Mi Home, including two silly dashboard apps that were heavily obfuscated to prevent reverse engineering.
-After spending many, many days and nights unraveling the new authentication protocol I have decided to release my work free of charge.
-If you appreciate and value the information I provide please leave a donation:
-()[https://www.paypal.com/donate/?hosted_button_id=PVK44XRRZWTKG]
+Many great apps stopped working because of protocol changes in the Xiaomi BLE communication. I found only very few apps that were able to perform pairing like in Mi Home, including two silly dashboard apps that were heavily obfuscated to prevent reverse engineering.
 
-My wish is that those apps and projects that went dead (and are getting review bombed...) soon come back to live.
+After spending many, many days and nights unraveling the new authentication protocol I have decided to release my work free of charge. My wish is that those apps and projects that went dead (and are getting review bombed...) soon come back to live. If you appreciate and value my work, please [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=PVK44XRRZWTKG)
 
 ## Introduction
 In order to understand the authentication process I captured BLE communication during the pairing process between Mi Home app and the target device.
@@ -13,7 +9,7 @@ The communication is described in 'ble_security_proto.txt'. Further details incl
 but for now you can always check the code.
 
 ## Installation
-Clone this repository and simply run `pip install -e`. I'm looking into pushing this package to PyPi.
+Clone this repository and simply run `pip install -e`.
 
 Requires Python 3.
 
@@ -36,15 +32,15 @@ If you want to use your device with other apps after pairing, either reinstall o
 This work would not have been possible without the following projects.
 
 (Nb legacy protocol)
-@nopbxlr https://github.com/scooterhacking/NinebotCrypto
-@CamiAlfa https://github.com/CamiAlfa/M365-BLE-PROTOCOL
+* @nopbxlr https://github.com/scooterhacking/NinebotCrypto
+* @CamiAlfa https://github.com/CamiAlfa/M365-BLE-PROTOCOL
 
 (Mi EC protocol)
-@danielkucera https://github.com/danielkucera/mi-standardauth
-@atc1441 https://github.com/atc1441/ATC_MiThermometer
+* @danielkucera https://github.com/danielkucera/mi-standardauth
+* @atc1441 https://github.com/atc1441/ATC_MiThermometer
 
 ## License
-Refer to LICENSE.md
+See LICENSE.md
 
 ## Disclaimer
 I'm in no way affiliated with Xiaomi or any of their subsidiaries and products. This code has been provided for research purposes only.
