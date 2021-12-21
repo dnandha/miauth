@@ -32,7 +32,7 @@ If you want to use your device with other apps after pairing, either reinstall o
 This work would not have been possible without the following projects:
 
 (Nb legacy protocol)
-* @nopbxlr https://github.com/scooterhacking/NinebotCrypto
+* @nopbxlr @majsi https://github.com/scooterhacking/NinebotCrypto
 * @CamiAlfa https://github.com/CamiAlfa/M365-BLE-PROTOCOL
 
 (Mi EC protocol)
