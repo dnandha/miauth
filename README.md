@@ -9,9 +9,9 @@ The communication is described in 'ble_security_proto.txt'. Further details incl
 but for now you can always check the code.
 
 ## Installation
-Clone this repository and simply run `pip install -e` inside the cloned directory.
+`pip install miauth`
 
-Requires Python 3.
+Or clone this repository and run `pip install -e` inside the cloned directory.
 
 ## Usage examples
 After installation, you will have access to the `miauth` command line interface (cli):
