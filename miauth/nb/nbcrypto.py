@@ -15,13 +15,14 @@
 #     You should have received a copy of the GNU Affero General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
+
+#     This class is my Python port of https://github.com/scooterhacking/NinebotCrypto
+#     Huge thanks to the original authors for sharing their work!
+
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.hashes import Hash, SHA1
 
 
-# Legal note:
-#   This class is my Python port of https://github.com/scooterhacking/NinebotCrypto
-#   I thank the original authors for sharing their work and respect the license agreement.
 class NbCrypto(object):
     FW_DATA = bytes.fromhex("97CFB802844143DE56002B3B34780A5D")
 
