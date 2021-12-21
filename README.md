@@ -9,7 +9,7 @@ The communication is described in 'ble_security_proto.txt'. Further details incl
 but for now you can always check the code.
 
 ## Installation
-Clone this repository and simply run `pip install -e`.
+Clone this repository and simply run `pip install -e` inside the cloned directory.
 
 Requires Python 3.
 
