@@ -1,0 +1,91 @@
+###################################################
+# (MI) BLE AUTH SECURITY PROTOCOL
+###################################################
+
+0. GREETING (official only, obsolete)
+a4 --> UPNP
+AVDTP --> 00 00 04 00 06 12
+00 00 05 00 06 12 --> AVDTP
+AVDTP --> 0000040112121212121212121212121212121212
+0000050112121212121212121212121212121212 --> AVDTP
+
+
+1. KEYEXCHANGE
+
+Listen UPNP + AVDTP + RX
+
+CMD_GET_INFO --> UPNP
+
+AVDTP --> CMD_WR_DID
+RCV_RDY --> AVDTP
+[AVDTP --> REMOTE_INFO]
+RCV_OK --> AVDTP
+
+CMD_SET_KEY --> UPNP
+
+CMD_SEND_DATA --> AVDTP
+AVDTP --> RCV_RDY
+[MY_PUBKEY --> AVDTP]
+AVDTP --> RCV_OK  (|| RCV_TOUT)
+
+AVDTP --> CMD_SEND_DATA 
+RCV_RDY --> AVDTP
+[AVDTP --> REMOTE_PUBKEY]
+RCV_OK --> AVDTP
+
+<<CALCULATIONS>>
+
+CMD_WR_DID --> AVDTP
+AVDTP --> RCV_RDY
+[DID_CT --> AVDTP]
+AVDTP --> RCV_OK (|| RCV_TOUT)
+
+13 00 00 00 --> UPNP
+UPNP --> 11 00 00 00  (|| fAIL: 12 00 00 00)
+
+
+2. PAIRING
+
+24 00 00 00 --> UPNP
+
+00 00 00 0b 01 00 --> AVDTP
+AVDTP --> RCV_RDY
+MI_RAND_KEY --> AVDTP
+AVDTP --> RCV_OK
+
+# | dash
+|AVDTP --> 00 00 00 0d 01 00
+|RCV_RDY --> AVDTP
+|AVDTP --> REMOTE_RANDKEY
+|RCV_OK --> AVDTP
+
+# || offical
+||AVDTP --> 00 00 02 0d REMOTE_RANDKEY
+||00 00 03 00 --> AVDTP
+
+<<CALCULATIONS>>
+
+AVDTP --> 00 00 00 0c 02 00
+RCV_RDY --> AVDTP
+[AVDTP --> REMOTE_DEVINFO]
+RCV_OK --> AVDTP
+
+00 00 00 0a 02 00 --> AVDTP
+AVDTP --> RCV_RDY
+[MY_DEVINFO --> AVDTP]
+AVDTP --> RCV_OK
+
+UPNP --> 21 00 00 00 (|| fAIL: 23 00 00 00)
+
+###################################################
+# VARS
+###################################################
+CMD_GET_INFO: a2 00 00 00
+CMD_SET_KEY: 15 00 00 00
+CMD_SEND_DATA: 00 00 00 03 04 00
+CMD_WR_DID: 00 00 00 00 02 00
+
+RCV_RDY: 00 00 01 01
+RCV_OK: 00 00 01 00
+RCV_TOUT: 00 00 01 05 01 00
+...
