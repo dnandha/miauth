@@ -89,6 +89,7 @@ Caution: After registration this device will lose coupling to all other apps (re
 
         print("Loading token from:", args.token_file)
         mc.load_token(args.token_file)
+
     print("Logging in...")
     mc.login()
 
