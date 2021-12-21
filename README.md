@@ -3,7 +3,7 @@ Many great apps stopped working because of protocol changes in the Xiaomi BLE co
 
 After spending many, many days and nights unraveling the new authentication protocol I have decided to release my work free of charge. My wish is that those apps and projects that went dead (and are getting review bombed...) soon come back to live. If you appreciate and value my work, please [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=PVK44XRRZWTKG)
 
-## Introduction
+## Description
 In order to understand the authentication process I captured BLE communication during the pairing process between Mi Home app and the target device.
 The communication is described in 'ble_security_proto.txt'. Further details including the cryptographic functions will be described in a separate post / file,
 but for now you can always check the code.
@@ -29,7 +29,7 @@ Note: Registering / pairing with devices unpairs the device from all other apps!
 If you want to use your device with other apps after pairing, either reinstall or remove / re-add the device inside the app.
 
 ## Special thanks
-This work would not have been possible without the following projects.
+This work would not have been possible without the following projects:
 
 (Nb legacy protocol)
 * @nopbxlr https://github.com/scooterhacking/NinebotCrypto
