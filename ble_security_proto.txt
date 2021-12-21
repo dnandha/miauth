@@ -2,7 +2,7 @@
 # (MI) BLE AUTH SECURITY PROTOCOL
 ###################################################
 
-0. GREETING (official only, obsolete)
+0. GREETING (official only, negligible)
 a4 --> UPNP
 AVDTP --> 00 00 04 00 06 12
 00 00 05 00 06 12 --> AVDTP
@@ -53,7 +53,7 @@ AVDTP --> RCV_RDY
 MI_RAND_KEY --> AVDTP
 AVDTP --> RCV_OK
 
-# | dash
+# | dash app
 |AVDTP --> 00 00 00 0d 01 00
 |RCV_RDY --> AVDTP
 |AVDTP --> REMOTE_RANDKEY
@@ -76,6 +76,7 @@ AVDTP --> RCV_RDY
 AVDTP --> RCV_OK
 
 UPNP --> 21 00 00 00 (|| fAIL: 23 00 00 00)
+
 
 ###################################################
 # VARS
