@@ -15,6 +15,12 @@
 #     You should have received a copy of the GNU Affero General Public License
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
+
+#     Huge thanks to Aaron Christophel (Atc1441) and Daniel Kucera!
+#     I have adapted some function and variable declarations from their respective works:
+#           https://github.com/danielkucera/mi-standardauth/blob/master/provision.py
+#           https://github.com/atc1441/atc1441.github.io/blob/master/TelinkFlasher.html
+
 import secrets
 
 from cryptography.hazmat.backends import default_backend
