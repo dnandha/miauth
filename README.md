@@ -14,7 +14,7 @@ Clone this repository and simply run `pip install -e` inside the cloned director
 Requires Python 3.
 
 ## Usage examples
-After installation, you will have access to the `miauth` command line interface (cli).
+After installation, you will have access to the `miauth` command line interface (cli):
 
 1. Authenticate and retrieve serial number and firmware version via (legacy) Nb protocol:
 `miauth -s -v <device_mac> nb`
