@@ -4,7 +4,7 @@ Many great apps stopped working because of protocol changes in the Xiaomi BLE co
 After spending many, many days and nights unraveling the new authentication protocol I have decided to release my work free of charge. My wish is that those apps and projects that went dead (and are getting review bombed...) soon come back to live. If you appreciate and value my work, please [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=PVK44XRRZWTKG)
 
 ## Description
-In order to understand the authentication process I captured BLE communication during the pairing process between Mi Home app and the target device. I describe the communication protocol and cryptography under docs/.
+In order to understand the authentication process I captured BLE communication during the pairing process between Mi Home app and the target device. I have fully described the communication protocol and cryptography in the [Documentation](doc/).
 
 ## Installation
 `pip install miauth`
