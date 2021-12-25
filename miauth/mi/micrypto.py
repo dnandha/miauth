@@ -31,6 +31,8 @@ from cryptography.hazmat.primitives.ciphers.aead import AESCCM
 from cryptography.hazmat.primitives.hmac import HMAC
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
+from miauth.util import crc16, int_to_bytes
+
 
 class MiCrypto(object):
     @staticmethod
@@ -38,20 +40,23 @@ class MiCrypto(object):
         return secrets.token_bytes(16)
 
     @staticmethod
-    def decode_pub_key(data):
+    def bytes_to_pub_key(data):
         return ec.EllipticCurvePublicKey.from_encoded_point(
             ec.SECP256R1(), b'\x04' + data)
 
     @staticmethod
+    def pub_key_to_bytes(key):
+        return key.public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)[1:]
+
+    @staticmethod
     def gen_keypair():
         priv_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
-        pub_key = priv_key.public_key().public_bytes(Encoding.X962,
-                                                     PublicFormat.UncompressedPoint)[1:]
+        pub_key = priv_key.public_key()
         return priv_key, pub_key
 
     @staticmethod
-    def create_e_share_key(pub_key, private_key):
-        return private_key.exchange(ec.ECDH(), pub_key)
+    def generate_secret(private_key, public_key):
+        return private_key.exchange(ec.ECDH(), public_key)
 
     @staticmethod
     def derive_key(shared_key, salt=None):
@@ -68,9 +73,9 @@ class MiCrypto(object):
         ).derive(shared_key)
 
     @staticmethod
-    def hash(derived_key, salt):
+    def hash(derived_key, data):
         hmac = HMAC(derived_key, algorithm=hashes.SHA256())
-        hmac.update(salt)
+        hmac.update(data)
         return hmac.finalize()
 
     @staticmethod
@@ -82,32 +87,17 @@ class MiCrypto(object):
         return aes_ccm.encrypt(nonce, did, aad)
 
     @staticmethod
-    def encrypt_uart(app_key, app_iv, msg, it=0):
-        def encode_it(it_):  # can probably be further simplified
-            a = b''
-            for i in range(4):
-                a += bytes([it_])
-                it_ >>= 8
-            return a
-
-        def crc16(arr):  # exactly like crc in nb proto
-            res = bytearray(2)
-
-            n = ~sum(arr)
-            res[0] = n & 0xff
-            res[1] = (n >> 8) & 0xff
-            return res
-
+    def encrypt_uart(key, iv, msg, it=0, rand=secrets.token_bytes(4)):
         msg = msg[2:]  # ditch header
 
         size = msg[:1]
         data = msg[1:]
-        data += secrets.token_bytes(4)  # add four random bytes to data
+        data += rand  # add four random bytes to data
 
-        it = encode_it(it)  # encode iterator to four bytes
-        nonce = app_iv + bytes([0] * 4) + it
+        it = int_to_bytes(it)  # encode iterator to four bytes
+        nonce = iv + bytes([0] * 4) + it
 
-        aes_ccm = AESCCM(app_key, tag_length=4)
+        aes_ccm = AESCCM(key, tag_length=4)
         ct = aes_ccm.encrypt(nonce, data, None)
 
         header = b'\x55\xab'  # new header
@@ -117,17 +107,15 @@ class MiCrypto(object):
         return header + data + crc
 
     @staticmethod
-    def decrypt_uart(dev_key, dev_iv, msg):
+    def decrypt_uart(key, iv, msg):
         header = msg[:2]
         if header != b'\x55\xab':
-            raise Exception("Invalid response received.")
+            raise Exception("Invalid header.")
 
         it = msg[3:5]
         ct = msg[5:-2]
 
-        nonce = dev_iv + bytes([0] * 4) + it + bytes([0] * 2)
+        nonce = iv + bytes([0] * 4) + it + bytes([0] * 2)
 
-        aes_ccm = AESCCM(dev_key, tag_length=4)
-        data = aes_ccm.decrypt(nonce, ct, None)
-
-        return data
+        aes_ccm = AESCCM(key, tag_length=4)
+        return aes_ccm.decrypt(nonce, ct, None)

@@ -22,6 +22,8 @@
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.hashes import Hash, SHA1
 
+from miauth.util import crc16
+
 
 class NbCrypto(object):
     FW_DATA = bytes.fromhex("97CFB802844143DE56002B3B34780A5D")
@@ -120,13 +122,7 @@ class NbCrypto(object):
     @classmethod
     def crc_next(cls, data, sha1_key=None, aes_data=None):
         if sha1_key is None and aes_data is None:  # crc_first
-            result = bytearray(2)
-
-            crc = ~sum(data)
-            result[0] = crc & 0xff
-            result[1] = (crc >> 8) & 0xff
-
-            return result
+            return crc16(data)
 
         aes_key = cls.aes_ecb_encrypt(aes_data, sha1_key)
 

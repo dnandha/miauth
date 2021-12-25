@@ -190,8 +190,8 @@ class MiClient(btle.DefaultDelegate):
         self.next_state()
 
     def calc_did(self, private_key):
-        remote_pub_key = MiCrypto.decode_pub_key(self.remote_key)
-        e_share_key = MiCrypto.create_e_share_key(remote_pub_key, private_key)
+        remote_pub_key = MiCrypto.bytes_to_pub_key(self.remote_key)
+        e_share_key = MiCrypto.generate_secret(private_key, remote_pub_key)
 
         derived_key = MiCrypto.derive_key(e_share_key)
 
@@ -241,7 +241,7 @@ class MiClient(btle.DefaultDelegate):
         def on_send_key_state():
             self.remote_info = self.received_data
 
-            self.send_data = pub_key
+            self.send_data = MiCrypto.pub_key_to_bytes(pub_key)
             self.bt_write(self.ch_upnp, MiCommand.CMD_SET_KEY)
             self.bt_write(self.ch_avdtp, MiCommand.CMD_SEND_DATA)
 
