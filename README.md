@@ -1,4 +1,4 @@
-# Xiaomi Mi / Nb BLE client
+# Xiaomi Mi / Nb BLE authentication
 Many great apps stopped working because of protocol changes in the Xiaomi BLE communication. I found only very few apps that were able to perform pairing like in Mi Home, including two dashboard apps that were heavily obfuscated to prevent reverse engineering.
 
 After spending many, many days and nights unraveling the new authentication protocol I have decided to release my work free of charge. My wish is that those apps and projects that went dead (and are getting review bombed...) soon come back to live. If you appreciate and value my work, please [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=PVK44XRRZWTKG)
@@ -6,28 +6,8 @@ After spending many, many days and nights unraveling the new authentication prot
 ## Description
 In order to understand the authentication process I captured BLE communication during the pairing process between Mi Home app and the target device. I have fully described the communication protocol and cryptography in the [Documentation](doc/).
 
-## Installation
-`pip install miauth`
-
-Or clone this repository and run `pip install -e` inside the cloned directory.
-
-### Running tests
-`python -m pytest` or `tox` in project main directory.
-
-## Usage examples
-After installation, you will have access to the `miauth` command line interface (cli):
-
-1. Register / pair with device via Mi EC protocol (generates 'mi_token' file):
-`miauth <device_mac> --register`
-1. Login and retrieve serial number and firmware version via Mi EC protocol:
-`miauth -s -v <device_mac>`
-1. Authenticate and retrieve serial number and firmware version via (legacy) Nb protocol:
-`miauth --nb -s -v <device_mac>`
-
-For a full list of the possible commands run `miauth -h`.
-
-Note: Registering / pairing with devices unpairs the device from all other apps!
-If you want to use your device with other apps after pairing, either reinstall or remove / re-add the device inside the app.
+## Python and Java libraries
+For optimal platform support I provide both a [Python package](lib/python/) and a [Java library](lib/java/) for Mi authentication. You can find instructions on how to install and use these libraries in the respective folders.
 
 ## Special thanks
 This work would not have been possible without the following projects:

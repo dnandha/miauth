@@ -1,13 +1,18 @@
-# Xiaomi Mi BLE JAVA client
-
-## Description
-In order to make the Mi authentication accessible to Java clients, i.e. Android based systems, I have ported my original work from [miauth](). If you want to understand the authentication process: I have fully described the communication protocol and cryptography in the [Documentation](doc/).
+# Xiaomi Mi BLE - JAVA client
 
 ## Installation
 Simply import the `miauth` folder into your project.
+(TODO: publish lib on Maven repo)
 
-## Using the library
-...
+### Running tests
+In your IDE of choice simply select the 'test' folder and run all tests.
+
+### Dependencies
+* `madgag.spongycastle.bcpg.jdk15on`
+* `madgag.spongycastle.bcpkix.jdk15on`
+* `io.reactivex.rxjava2.rxjava`
+
+## Usage
 
 ### Initialization
 1. Implement IDevice interface
@@ -65,6 +70,11 @@ auth = new AuthLogin(device, dataLogin, complete -> {
 // send command to login
 auth.start();
 ```
+
+### Tips for Android
+Here are a few suggestions if you want to use this library in your Android application:
+* Replace `io.reactivex.rxjava2.rxjava` with `io.reactivex.rxjava2.rxandroid`, this allows you to use the AndroidScheduler
+* Replace `System.out.println` and `System.err.println` with `Log.println`
 
 ## License
 See LICENSE.md

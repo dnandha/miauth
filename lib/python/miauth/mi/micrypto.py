@@ -25,7 +25,7 @@ import secrets
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives._serialization import Encoding, PublicFormat
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat, PrivateFormat, NoEncryption
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.ciphers.aead import AESCCM
 from cryptography.hazmat.primitives.hmac import HMAC
@@ -53,6 +53,14 @@ class MiCrypto(object):
         priv_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
         pub_key = priv_key.public_key()
         return priv_key, pub_key
+
+    @staticmethod
+    def val_to_private_key(val):
+        return ec.derive_private_key(val, ec.SECP256R1())
+
+    @staticmethod
+    def private_key_to_val(key):
+        return key.private_numbers().private_value
 
     @staticmethod
     def generate_secret(private_key, public_key):
@@ -84,6 +92,7 @@ class MiCrypto(object):
         nonce = bytes([16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27])
         did = did
         aad = b"devID"
+
         return aes_ccm.encrypt(nonce, did, aad)
 
     @staticmethod

@@ -84,6 +84,13 @@ class MiClient(btle.DefaultDelegate):
 
         char.write(data, resp)
 
+    # no header bytes
+    # TODO: merge write functions
+    def bt_write_chunked(self, char, data, resp=False, chunk_size=20):
+        for i in range(0, len(data), chunk_size):
+            chunk = data[i:i + chunk_size]
+            self.bt_write(char, chunk, resp=resp)
+
     def bt_write_parcel(self, char, data, resp=False, chunk_size=18):
         for i in range(0, len(data), chunk_size):
             chunk = data[i:i + chunk_size]
@@ -128,7 +135,7 @@ class MiClient(btle.DefaultDelegate):
     def main_handler(self, data):
         frm = data[0] + 0x100 * data[1]
         if self.debug:
-            print("<-", data.hex(), frm)
+            print("<-", data.hex(), frm, self.get_state())
 
         if self.get_state() in [MiClient.State.RECV_INFO,
                                 MiClient.State.RECV_KEY]:
@@ -234,6 +241,9 @@ class MiClient(btle.DefaultDelegate):
 
     def register(self):
         priv_key, pub_key = MiCrypto.gen_keypair()
+        if self.debug:
+            print("Private Key (Val):", MiCrypto.private_key_to_val(priv_key))
+            print("Public Key (Hex):", MiCrypto.pub_key_to_bytes(pub_key).hex())
 
         def on_recv_info_state():
             self.bt_write(self.ch_upnp, MiCommand.CMD_GET_INFO)
@@ -339,9 +349,9 @@ class MiClient(btle.DefaultDelegate):
 
         self.received_data = b''
         if not self.keys:
-            self.bt_write(self.ch_tx, cmd)
+            self.bt_write_chunked(self.ch_tx, cmd)
 
-            while self.p.waitForNotifications(3.0):
+            while self.p.waitForNotifications(2.0):
                 continue
 
             if not self.received_data:
@@ -349,14 +359,20 @@ class MiClient(btle.DefaultDelegate):
 
             return self.received_data
 
-        res = MiCrypto.encrypt_uart(self.keys['app_key'], self.keys['app_iv'], cmd, it=self.uart_it)
-        self.bt_write(self.ch_tx, res)
+        res = MiCrypto.encrypt_uart(self.keys['app_key'],
+                                    self.keys['app_iv'],
+                                    cmd,
+                                    it=self.uart_it)
+        self.bt_write_chunked(self.ch_tx, res)
         self.uart_it += 1
 
-        while self.p.waitForNotifications(3.0):
+        while self.p.waitForNotifications(2.0):
             continue
 
         if not self.received_data:
             raise Exception("No answer received. Firmware not supported.")
 
-        return MiCrypto.decrypt_uart(self.keys['dev_key'], self.keys['dev_iv'], self.received_data)[3:-4]
+        return MiCrypto.decrypt_uart(
+            self.keys['dev_key'],
+            self.keys['dev_iv'],
+            self.received_data)[3:-4]

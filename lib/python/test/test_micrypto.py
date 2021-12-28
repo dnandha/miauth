@@ -13,6 +13,16 @@ class TestMiCrypto(TestCase):
         pub_key = MiCrypto.pub_key_to_bytes(pub_key)
         self.assertEqual(64, len(pub_key))
 
+    def test_gen_private_key(self):
+        val = 38598657185418289442228743809972412250162588503372669841026540598582897367118
+        priv_key = MiCrypto.val_to_private_key(val)
+        priv_val = MiCrypto.private_key_to_val(priv_key)
+        pub = MiCrypto.pub_key_to_bytes(priv_key.public_key())
+        self.assertEqual(val, priv_val)
+        self.assertEqual(bytes.fromhex("b5dca0aec31a8932d0f53cbcbcf0cfdd833c355cada1025cc076e013439ddec2b4017b546a11d79a758db9d015a2ed8926cf82179b593679187d623b5e430fca"),
+                         pub,
+                         pub.hex())
+
     def test_create_e_share_key(self):
         kp1 = MiCrypto.gen_keypair()
         kp2 = MiCrypto.gen_keypair()
@@ -46,13 +56,56 @@ class TestMiCrypto(TestCase):
         self.assertEqual(bytes.fromhex("aeebd70f8c2bdf8c"), ct, ct.hex())
 
     def test_encrypt_uart(self):
-        key = bytes.fromhex("239b3c7e92dc6d6d2fa174a215aedf2e")
-        iv = bytes([1, 2])
-        ct = MiCrypto.encrypt_uart(key, iv, bytes.fromhex("55aa032001100e"), rand=bytes([1, 2, 3, 4]))
+        app_key = bytes.fromhex("239b3c7e92dc6d6d2fa174a215aedf2e")
+        app_iv = bytes([1, 2])
+        ct = MiCrypto.encrypt_uart(app_key, app_iv, bytes.fromhex("55aa032001100e"), rand=bytes([1, 2, 3, 4]))
         self.assertEqual(bytes.fromhex("55ab030000adf399086b9e0bd059366ad10dfa"), ct, ct.hex())
 
     def test_decrypt_uart(self):
-        key = bytes.fromhex("239b3c7e92dc6d6d2fa174a215aedf2e")
-        iv = bytes([1, 2])
-        msg = MiCrypto.decrypt_uart(key, iv, bytes.fromhex("55ab030000adf399084637f7234162d70d9dfa"))
-        self.assertEqual(bytes.fromhex("2001100e2cabfff7"), msg, msg.hex())
+        dev_key = bytes.fromhex("239b3c7e92dc6d6d2fa174a215aedf2e")
+        dev_iv = bytes([1, 2])
+        ct = MiCrypto.encrypt_uart(dev_key, dev_iv, bytes.fromhex("55aa032001100e"), rand=bytes([1, 2, 3, 4]))
+        self.assertEqual(bytes.fromhex("55ab030000adf399086b9e0bd059366ad10dfa"), ct, ct.hex())
+        
+    def test_register(self):
+        priv_key = MiCrypto.val_to_private_key(48461508383982493215332654270464913273532832436436077476553357014100094140803)
+        #print(MiCrypto.pub_key_to_bytes(priv_key.public_key()).hex())
+        
+        remote_info = bytes.fromhex("0100000000626c742e342e31386e35383236366b67673030")
+        remote_pub_key = MiCrypto.bytes_to_pub_key(bytes.fromhex("2afe2a8c1c56e5e70721665cd20d017273111ecaeceb1e4d641e7b7a122a9c3041e5cbc962eefbdb155ffd95847a0d8762803291fc2866c5672ceee0e77d77fc"))
+        
+        secret = MiCrypto.generate_secret(priv_key, remote_pub_key)
+        derived = MiCrypto.derive_key(secret)
+        did_key = derived[28:44]
+        did_ct = MiCrypto.encrypt_did(did_key, remote_info[4:])
+        self.assertEqual("fac3a6fd591dcea21f9f4fefe297804f49291527ae818b285f4a75a6fab72af8", secret.hex())
+        self.assertEqual("0cf5615003810d89c233a12a8fc5100e31299d80c4c290dc7d33f19ec42ea48a95c5544f105fe7ebb8b39233c6542b1fff90b2206265080bf516365fd8d758fe", derived.hex())
+        self.assertEqual("c42ea48a95c5544f105fe7ebb8b39233", did_key.hex())
+        self.assertEqual("646735cc7a96373aabbd93afa089bb6cd2d080302101007a", did_ct.hex())
+
+    def test_login(self):
+        token = bytes.fromhex("0cf5615003810d89c233a12a")
+        random_key = bytes.fromhex("a8699783c1f03c7b73a046cdb613a9bf")
+        remote_key = bytes.fromhex("90fdec0ece05016d7f116b50fca4b4bf")
+        
+        remote_info = bytes.fromhex("471467ea7ed6064f8dd72f416c079dcb3bb78e3c94a51e97b98ef7623a7798e5")
+
+        salt = random_key + remote_key
+        salt_inv = remote_key + random_key
+
+        derived_key = MiCrypto.derive_key(token, salt=salt)
+        keys = {
+            'dev_key': derived_key[:16],
+            'app_key': derived_key[16:32],
+            'dev_iv': derived_key[32:36],
+            'app_iv': derived_key[36:40],
+        }
+        info = MiCrypto.hash(keys['app_key'], salt)
+        expected_remote_info = MiCrypto.hash(keys['dev_key'], salt_inv)
+
+        self.assertEqual(remote_info, expected_remote_info)
+        self.assertEqual("bbb99b6a6f1ae419e3b13db93514f3e12a1843033f276392eea99068affca753", info.hex())
+        self.assertEqual("3c2fdae69f8746663a7d91029724b072", keys['dev_key'].hex())
+        self.assertEqual("12a4122dbe3cf60f3bdcb37139c34611", keys['app_key'].hex())
+        self.assertEqual("cd016050", keys['dev_iv'].hex())
+        self.assertEqual("c87de6f1", keys['app_iv'].hex())
