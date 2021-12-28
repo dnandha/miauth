@@ -1,4 +1,4 @@
-# Xiaomi Mi BLE - JAVA client
+# Xiaomi Mi BLE - JAVA library
 
 ## Installation
 Simply import the `miauth` folder into your project.
