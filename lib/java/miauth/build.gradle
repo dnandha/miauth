@@ -1,0 +1,49 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+}
+
+group 'de.nandtek'
+version '0.1.0'
+
+repositories {
+    mavenCentral()
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            customizePom(pom)
+            groupId 'com.github.mautini'
+            artifactId 'schemaorg-java'
+            version '0.1.0'
+
+            from components.java
+
+            artifact(sourceJar) {
+                classifier = 'sources'
+            }
+            artifact(javadocJar) {
+                classifier = 'javadoc'
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "MiAuth"
+            url = "http://my.org.server/repo/url"
+            credentials {
+                username = 'alice'
+                password = 'my-password'
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
+    implementation 'com.madgag.spongycastle:bcpg-jdk15on:1.58.0.0'
+    implementation 'com.madgag.spongycastle:bcpkix-jdk15on:1.58.0.0'
+    testImplementation 'junit:junit:4.13.2'
+}
