@@ -25,6 +25,7 @@ public interface IDevice {
     void prepare();
     void connect(Consumer<Boolean> onConnect);
     void disconnect();
+    boolean isConnected();
     void write(UUID uuid, byte[] data, Consumer<byte[]> onWriteSuccess);
     void read(UUID uuid, Consumer<byte[]> onReadSuccess);
     void onNotify(UUID uuid, Consumer<byte[]> callback);

@@ -101,6 +101,12 @@ public class DataLogin implements IData {
         return parent;
     }
 
+    @Override
+    public void clear() {
+        remoteLoginKey = null;
+        remoteLoginInfo = null;
+    }
+
     public byte[] encryptUart(byte[] msg) {
         return Crypto.encryptUart(appKey, appIv, msg, it++);
     }

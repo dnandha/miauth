@@ -18,7 +18,7 @@
 package de.nandtek.miauth;
 
 public interface IData {
-    public void calculate();
+    void calculate();
     boolean hasRemoteInfo();
     boolean hasRemoteKey();
     void setRemoteInfo(byte[] data);
@@ -26,4 +26,5 @@ public interface IData {
     byte[] getMyKey();
     byte[] getCt();
     Data getParent();
+    void clear();
 }

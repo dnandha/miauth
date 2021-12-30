@@ -19,37 +19,40 @@ package de.nandtek.miauth;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
+import io.reactivex.Scheduler;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 
-// TODO: move comm from MiAuth into here
-public class AuthComm extends AuthBase {
-    private final Consumer<byte[]> onMessage;
+public class AuthCommand extends AuthBase {
+    private final byte[] command;
 
-    public AuthComm(IDevice device, DataLogin data, Consumer<byte[]> onMessage) {
+    // TODO: redesign
+    public AuthCommand(IDevice device, DataLogin data, byte[] command) {
         super(device, data);
-        this.onMessage = onMessage;
-
-        setup();
+        this.command = command;
     }
 
-    @Override
-    public void start() {
-        device.onNotify(Uuid.RX, this::receiveParcel);
-
-        write(CommandBuilder.GetSerialNo);
-    }
-
-    @Override
-    public void setup() {
+    // TODO: extract interface
+    public AuthBase setup(Scheduler scheduler, Consumer<byte[]> onResponse) {
         final Disposable receiveSub = receiveQueue
-                //.observeOn(AndroidSchedulers.mainThread())
+                .observeOn(scheduler)
+                .timeout(2, TimeUnit.SECONDS)
                 .subscribe(message -> {
                     byte[] dec = ((DataLogin)data).decryptUart(message);
-                    onMessage.accept(Arrays.copyOfRange(dec, 3, dec.length-4));
-                });
+                    onResponse.accept(Arrays.copyOfRange(dec, 3, dec.length-4));
+                }, err -> onResponse.accept(null));
         compositeDisposable.add(receiveSub);
+
+        return this;
+    }
+
+    @Override
+    public void exec() {
+        device.onNotify(MiUUID.RX, this::receiveParcel);
+
+        writeChunked(command);
     }
 
     // TODO: generalize
@@ -72,14 +75,14 @@ public class AuthComm extends AuthBase {
         }
     }
 
-    private void write(byte[] cmd) {
-        ByteBuffer buf = ByteBuffer.wrap(cmd);
+    private void writeChunked(byte[] cmd) {
+        ByteBuffer buf = ByteBuffer.wrap(((DataLogin)data).encryptUart(cmd));
         while (buf.remaining() > 0) {
             int len = Math.min(buf.remaining(), ChunkSize+2);
             byte[] chunk = new byte[len];
             buf.get(chunk, 0, len);
 
-            write(Uuid.TX, ((DataLogin)data).encryptUart(chunk));
+            write(MiUUID.TX, chunk);
         }
     }
 }

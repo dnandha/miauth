@@ -17,13 +17,6 @@
 //
 package de.nandtek.miauth;
 
-import java.util.UUID;
-
-public class Uuid {
-    static final UUID Auth = UUID.fromString("0000fe95-0000-1000-8000-00805f9b34fb");
-    static final UUID Uart = UUID.fromString("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
-    static final UUID TX = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
-    static final UUID RX = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e");
-    static final UUID UPNP = UUID.fromString("00000010-0000-1000-8000-00805f9b34fb");
-    static final UUID AVDTP = UUID.fromString("00000019-0000-1000-8000-00805f9b34fb");
+public class CommandExample {
+    public static byte[] GetSerialNo = new byte[]{0x55, (byte)0xaa, 0x03, 0x20, 0x01, 0x10, 0x0e};
 }

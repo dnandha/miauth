@@ -17,11 +17,12 @@
 //
 package de.nandtek.miauth;
 
+import java.nio.ByteBuffer;
+import java.util.UUID;
+
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.functions.Consumer;
 import io.reactivex.subjects.PublishSubject;
-
-import java.nio.ByteBuffer;
 
 public abstract class AuthBase {
     public static int ChunkSize = 18;
@@ -36,11 +37,11 @@ public abstract class AuthBase {
         this.data = data;
     }
 
-    protected void write(java.util.UUID uuid, byte[] data) {
+    protected void write(UUID uuid, byte[] data) {
         write(uuid, data, null);
     }
 
-    protected void write(java.util.UUID uuid, byte[] data, Consumer<byte[]> onComplete) {
+    protected void write(UUID uuid, byte[] data, Consumer<byte[]> onComplete) {
         device.write(uuid, data, resp -> {
             System.out.println("write response: " + Util.bytesToHex(resp));
             if (onComplete != null) {
@@ -49,7 +50,7 @@ public abstract class AuthBase {
         });
     }
 
-    protected void writeParcel(java.util.UUID uuid, byte[] data) {
+    protected void writeParcel(UUID uuid, byte[] data) {
         ByteBuffer buf = ByteBuffer.wrap(data);
         for (int i = 1; buf.remaining() > 0; i++) {
             int len = Math.min(buf.remaining(), ChunkSize);
@@ -66,17 +67,17 @@ public abstract class AuthBase {
     protected void init(Consumer<Boolean> callback) {
         device.prepare();
         device.connect(connect -> {
-            device.onNotify(Uuid.UPNP, this::receiveParcel);
-            device.onNotify(Uuid.AVDTP, this::receiveParcel);
+            device.onNotify(MiUUID.UPNP, this::receiveParcel);
+            device.onNotify(MiUUID.AVDTP, this::receiveParcel);
 
             callback.accept(connect);
         });
     }
 
     protected void receiveParcel(byte[] data) {
-        System.out.println("recv message:" + Util.bytesToHex(data));
+        System.out.println("recv message: " + Util.bytesToHex(data));
         int frame = data[0] & 0xff + 0x100 * data[1] & 0xff;
-        System.out.println("recv frame:" + String.valueOf(frame));
+        System.out.println("recv frame: " + frame);
         if (frame == 0) {
             if (data.length == 6) {
                 receiveBuffer = ByteBuffer.allocate((data[4] & 0xff + 0x100 * data[5] & 0xff) * ChunkSize);
@@ -100,6 +101,5 @@ public abstract class AuthBase {
         device.disconnect();
     }
 
-    protected abstract void setup();
-    public abstract void start();
+    public abstract void exec();
 }

@@ -89,4 +89,10 @@ public class DataRegister implements IData {
     public Data getParent() {
         return parent;
     }
+
+    @Override
+    public void clear() {
+        remoteInfo = null;
+        remoteKey = null;
+    }
 }

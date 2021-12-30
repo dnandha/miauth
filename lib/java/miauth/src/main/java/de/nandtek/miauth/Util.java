@@ -48,7 +48,37 @@ public class Util {
         return hex.toLowerCase();
     }
 
+    public static int bytesToInt(byte[] bytes) {
+        //ByteBuffer bb = ByteBuffer.wrap(bytes);
+        //bb.order(ByteOrder.LITTLE_ENDIAN);
+        //if (bytes.length == 1) {
+        //    return bb.getChar();
+        //} else if (bytes.length == 2) {
+        //    return bb.getShort();
+        //} else if (bytes.length == 4) {
+        //    return bb.getInt();
+        //}
+        //return 0;
+        int result = bytes[0] & 0xff;
+        for (int i = 1; i < bytes.length; i++) {
+            result |= (bytes[i] & 0xff) << 8;
+        }
+        return result;
+    }
+
     public static byte[] intToBytes(int i, int size) {
+        //byte[] result = new byte[size];
+        //ByteBuffer bb = ByteBuffer.allocate(size);
+        //bb.order(ByteOrder.LITTLE_ENDIAN);
+        //if (size == 1) {
+        //    bb.putChar((char) i);
+        //} else if (size == 2) {
+        //    bb.putShort((short) i);
+        //} else if (size == 4) {
+        //    bb.putInt(i);
+        //}
+        //bb.position(0).get(result);
+        //return result;
         byte[] result = new byte[size];
         for (int j = 0; j < size; j++) {
             result[j] = (byte)((i >> (j * 8)) & 0xff);

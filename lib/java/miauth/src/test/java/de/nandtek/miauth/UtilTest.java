@@ -45,6 +45,11 @@ public class UtilTest extends TestCase {
         Assert.assertArrayEquals(new byte[]{0x39,5,0,0}, b);
     }
 
+    public void testBytesToInt() {
+        int i = Util.bytesToInt(new byte[]{0x39,5,0,0});
+        Assert.assertEquals(1337, i);
+    }
+
     public void testCrc16() {
         byte[] crc = Util.crc16(new byte[]{(byte)0xa1,0x21,(byte)0xf3,4,5,6,7,8,9});
         Assert.assertEquals("23fe", Util.bytesToHex(crc));

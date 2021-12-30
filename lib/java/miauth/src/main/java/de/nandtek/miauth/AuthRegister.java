@@ -18,66 +18,57 @@
 package de.nandtek.miauth;
 
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
+import io.reactivex.Scheduler;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 
 public class AuthRegister extends AuthBase {
-    private final Consumer<Boolean> onComplete;
-    private boolean button;
-
-    public AuthRegister(IDevice device, DataRegister data, Consumer<Boolean> onComplete) {
+    public AuthRegister(IDevice device, DataRegister data) {
         super(device, data);
-
-        this.onComplete = onComplete;
-        this.button = false;
-
-        setup();
     }
 
-    @Override
-    public void setup() {
+    public AuthBase setup(Scheduler scheduler, Consumer<Boolean> onComplete) {
+        System.out.println("Setting up register");
+
         final Disposable receiveSub = receiveQueue
-                //.observeOn(AndroidSchedulers.mainThread())
+                .observeOn(scheduler)
+                .timeout(3, TimeUnit.SECONDS)
                 .subscribe(message -> {
                     if (!data.hasRemoteInfo()) {
                         if (Arrays.equals(message, CommandRegister.SendingCt)) {
-                            write(Uuid.AVDTP, CommandLogin.ReceiveReady);
+                            write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
                         } else {
-                            write(Uuid.AVDTP, CommandLogin.Received, complete -> {
-                                write(Uuid.AVDTP, CommandRegister.SendingKey);
+                            write(MiUUID.AVDTP, CommandLogin.Received, complete -> {
+                                write(MiUUID.AVDTP, CommandRegister.SendingKey);
                             });
-                            write(Uuid.UPNP, CommandRegister.KeyExchange);
+                            write(MiUUID.UPNP, CommandRegister.KeyExchange);
 
-                            if (!button) {
-                                System.out.println("register: " + "Disconnect and restart auth!");
-                                button = true;
-                                onComplete.accept(false);
-                            } else {
-                                data.setRemoteInfo(message);
-                            }
+                            System.out.println("remote info received");
+                            data.setRemoteInfo(message);
                         }
                     } else if (!data.hasRemoteKey()) {
                         if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
-                            writeParcel(Uuid.AVDTP, data.getMyKey());
+                            writeParcel(MiUUID.AVDTP, data.getMyKey());
                         } else if (Arrays.equals(message, CommandLogin.Received)) {
                             System.out.println("register: " + "public key sent");
                         } else {
                             if (Arrays.equals(message, CommandRegister.SendingKey)) {
-                                write(Uuid.AVDTP, CommandLogin.ReceiveReady);
+                                write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
                             } else {
                                 data.setRemoteKey(message);
                                 System.out.println("register: " + "remote key received -> calculate");
                                 data.calculate();
-                                write(Uuid.AVDTP, CommandLogin.Received);
-                                write(Uuid.AVDTP, CommandRegister.SendingCt);
+                                write(MiUUID.AVDTP, CommandLogin.Received);
+                                write(MiUUID.AVDTP, CommandRegister.SendingCt);
                             }
                         }
                     } else {
                         if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
-                            writeParcel(Uuid.AVDTP, data.getCt());
+                            writeParcel(MiUUID.AVDTP, data.getCt());
                         } else if (Arrays.equals(message, CommandLogin.Received)) {
-                            write(Uuid.UPNP, CommandRegister.AuthRequest);
+                            write(MiUUID.UPNP, CommandRegister.AuthRequest);
                         } else if (Arrays.equals(message, CommandRegister.AuthConfirmed)) {
                             System.out.println("register: " + "registration succeeded");
                             compositeDisposable.dispose(); // TODO: does this work?
@@ -89,15 +80,23 @@ public class AuthRegister extends AuthBase {
                         }
                     }
                 },
-                err -> System.err.println("register: " + err.getMessage())
+                err -> {
+                    data.clear();
+                    device.disconnect();
+
+                    System.err.println("register: " + err.getMessage());
+                    onComplete.accept(false);
+                }
         );
         compositeDisposable.add(receiveSub);
+
+        return this;
     }
 
     @Override
-    public void start() {
+    public void exec() {
         init(onConnect -> {
-            write(Uuid.UPNP, CommandRegister.GetInfo);
+            write(MiUUID.UPNP, CommandRegister.GetInfo);
         });
     }
 }
