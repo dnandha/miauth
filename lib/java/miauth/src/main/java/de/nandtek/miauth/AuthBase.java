@@ -20,19 +20,23 @@ package de.nandtek.miauth;
 import java.nio.ByteBuffer;
 import java.util.UUID;
 
+import io.reactivex.Scheduler;
 import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 import io.reactivex.subjects.PublishSubject;
 
-public abstract class AuthBase {
+public class AuthBase {
     public static int ChunkSize = 18;
+    protected final Scheduler scheduler;
     protected IDevice device;
     protected final IData data;
-    protected final CompositeDisposable compositeDisposable = new CompositeDisposable();
     protected final PublishSubject<byte[]> receiveQueue = PublishSubject.create();
     protected ByteBuffer receiveBuffer;
+    protected CompositeDisposable compositeDisposable = new CompositeDisposable();
 
-    public AuthBase(IDevice device, IData data) {
+    public AuthBase(Scheduler scheduler, IDevice device, IData data) {
+        this.scheduler = scheduler;
         this.device = device;
         this.data = data;
     }
@@ -67,8 +71,18 @@ public abstract class AuthBase {
     protected void init(Consumer<Boolean> callback) {
         device.prepare();
         device.connect(connect -> {
-            device.onNotify(MiUUID.UPNP, this::receiveParcel);
-            device.onNotify(MiUUID.AVDTP, this::receiveParcel);
+            System.out.println("Subscribe");
+            final Disposable upnpSub = device.onNotify(MiUUID.UPNP).subscribe(
+                    this::receiveParcel,
+                    throwable -> System.err.println(throwable.getMessage())
+                    );
+            final Disposable avdtpSub = device.onNotify(MiUUID.AVDTP).subscribe(
+                    this::receiveParcel,
+                    throwable -> System.err.println(throwable.getMessage())
+                    );
+
+            //compositeDisposable.add(upnpSub);
+            //compositeDisposable.add(avdtpSub);
 
             callback.accept(connect);
         });
@@ -96,10 +110,19 @@ public abstract class AuthBase {
         }
     }
 
-    public void disconnect() {
-        compositeDisposable.dispose();
+    public AuthBase reset() {
         device.disconnect();
+        data.clear();
+        //receiveQueue.onComplete();
+        compositeDisposable.dispose();
+
+        return this;
     }
 
-    public abstract void exec();
+    protected void setup() {
+    }
+
+    public void exec() {
+        setup();
+    }
 }

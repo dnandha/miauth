@@ -18,23 +18,33 @@
 package de.nandtek.miauth;
 
 import java.util.Arrays;
+import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 
+import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
+import io.reactivex.Observer;
 import io.reactivex.Scheduler;
+import io.reactivex.Single;
+import io.reactivex.annotations.NonNull;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 
 public class AuthRegister extends AuthBase {
-    public AuthRegister(IDevice device, DataRegister data) {
-        super(device, data);
+
+    private final Consumer<Boolean> onComplete;
+
+    public AuthRegister(Scheduler scheduler, IDevice device, DataRegister data, Consumer<Boolean> onComplete) {
+        super(scheduler, device, data);
+        this.onComplete = onComplete;
     }
 
-    public AuthBase setup(Scheduler scheduler, Consumer<Boolean> onComplete) {
-        System.out.println("Setting up register");
-
+    @Override
+    protected void setup() {
+        System.out.println("register: setting up");
         final Disposable receiveSub = receiveQueue
-                .observeOn(scheduler)
-                .timeout(3, TimeUnit.SECONDS)
+                //.observeOn(scheduler)
+                .timeout(4, TimeUnit.SECONDS)
                 .subscribe(message -> {
                     if (!data.hasRemoteInfo()) {
                         if (Arrays.equals(message, CommandRegister.SendingCt)) {
@@ -70,33 +80,50 @@ public class AuthRegister extends AuthBase {
                         } else if (Arrays.equals(message, CommandLogin.Received)) {
                             write(MiUUID.UPNP, CommandRegister.AuthRequest);
                         } else if (Arrays.equals(message, CommandRegister.AuthConfirmed)) {
+                            //receiveQueue.onComplete();
+                            compositeDisposable.dispose();
+
                             System.out.println("register: " + "registration succeeded");
-                            compositeDisposable.dispose(); // TODO: does this work?
                             onComplete.accept(true);
                         } else if (Arrays.equals(message, CommandRegister.AuthDenied)) {
+                            //receiveQueue.onComplete();
+                            compositeDisposable.dispose();
+
                             System.err.println("register: " + "registration failed");
-                            compositeDisposable.dispose(); // TODO: does this work?
                             onComplete.accept(false);
                         }
                     }
                 },
                 err -> {
-                    data.clear();
-                    device.disconnect();
-
                     System.err.println("register: " + err.getMessage());
                     onComplete.accept(false);
                 }
         );
         compositeDisposable.add(receiveSub);
 
-        return this;
     }
 
     @Override
     public void exec() {
-        init(onConnect -> {
+        super.exec();
+
+        // TODO: improve this
+        if (!device.isConnected()) {
+            System.out.println("register: connecting");
+            init(onConnect -> {
+                write(MiUUID.UPNP, CommandRegister.GetInfo);
+            });
+        } else {
             write(MiUUID.UPNP, CommandRegister.GetInfo);
-        });
+        }
+    }
+
+    public AuthRegister clone() {
+        return new AuthRegister(scheduler, device, (DataRegister) data, onComplete);
+    }
+
+    public AuthLogin createLogin(Consumer<Boolean> onComplete) {
+        receiveQueue.onComplete();
+        return new AuthLogin(scheduler, device, new DataLogin(data.getParent()), onComplete);
     }
 }

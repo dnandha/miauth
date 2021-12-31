@@ -24,40 +24,60 @@ import java.util.concurrent.TimeUnit;
 import io.reactivex.Scheduler;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
+import io.reactivex.subjects.ReplaySubject;
 
 public class AuthCommand extends AuthBase {
     private final byte[] command;
+    private final Consumer<byte[]> onResponse;
 
-    // TODO: redesign
-    public AuthCommand(IDevice device, DataLogin data, byte[] command) {
-        super(device, data);
+    public AuthCommand(Scheduler scheduler, IDevice device, DataLogin data, byte[] command, Consumer<byte[]> onResponse) {
+        super(scheduler, device, data);
         this.command = command;
+        this.onResponse = onResponse;
     }
 
-    // TODO: extract interface
-    public AuthBase setup(Scheduler scheduler, Consumer<byte[]> onResponse) {
+    @Override
+    protected void setup() {
+        System.out.println("command: setting up");
         final Disposable receiveSub = receiveQueue
-                .observeOn(scheduler)
+                //.observeOn(scheduler)
                 .timeout(2, TimeUnit.SECONDS)
                 .subscribe(message -> {
+                    System.out.println("Finish command");
+                    receiveQueue.onComplete();
+                    compositeDisposable.dispose();
+
                     byte[] dec = ((DataLogin)data).decryptUart(message);
                     onResponse.accept(Arrays.copyOfRange(dec, 3, dec.length-4));
-                }, err -> onResponse.accept(null));
-        compositeDisposable.add(receiveSub);
+                }, err -> {
+                    receiveQueue.onComplete();
+                    compositeDisposable.dispose();
 
-        return this;
+                    System.err.println("command: " + err.getMessage());
+                    onResponse.accept(null);
+                });
+
+        final Disposable rxSub = device.onNotify(MiUUID.RX).subscribe(this::receiveParcel);
+
+        compositeDisposable.add(receiveSub);
+        compositeDisposable.add(rxSub);
     }
 
     @Override
     public void exec() {
-        device.onNotify(MiUUID.RX, this::receiveParcel);
+        super.exec();
 
+        System.out.println("Send command");
         writeChunked(command);
     }
 
     // TODO: generalize
     @Override
     protected void receiveParcel(byte[] data) {
+        if (receiveQueue.hasComplete()) {  // prevent multiple receives
+            return;
+        }
+
         System.out.println("recv message: "+ Util.bytesToHex(data));
         if ((data[0] & 0xff) == 0x55 && (data[1] & 0xff) != 0xaa) {
             receiveBuffer = ByteBuffer.allocate(0x10 * (ChunkSize+2));

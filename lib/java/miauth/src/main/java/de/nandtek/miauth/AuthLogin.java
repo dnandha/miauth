@@ -24,15 +24,18 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 
 public class AuthLogin extends AuthBase {
-    public AuthLogin(IDevice device, DataLogin data) {
-        super(device, data);
+    private final Consumer<Boolean> onComplete;
+
+    public AuthLogin(Scheduler scheduler, IDevice device, DataLogin data, Consumer<Boolean> onComplete) {
+        super(scheduler, device, data);
+        this.onComplete = onComplete;
     }
 
-    public AuthBase setup(Scheduler scheduler, Consumer<Boolean> onComplete) {
-        System.out.println("Setting up login");
-
+    @Override
+    protected void setup() {
+        System.out.println("login: setting up");
         final Disposable receiveSub = receiveQueue
-                .observeOn(scheduler)
+                //.observeOn(scheduler)
                 .subscribe(message -> {
                     if (!data.hasRemoteKey()) {
                         if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
@@ -63,39 +66,47 @@ public class AuthLogin extends AuthBase {
                         } else if (Arrays.equals(message, CommandLogin.Received)) {
                             System.out.println("login: " + "ct sent");
                         } else if (Arrays.equals(message, CommandLogin.AuthConfirmed)) {
+                            receiveQueue.onComplete();
+                            compositeDisposable.dispose();
+
                             System.out.println("login: " + "login succeeded");
-                            compositeDisposable.dispose(); // TODO: does this work?
                             onComplete.accept(true);
                         } else if (Arrays.equals(message, CommandLogin.AuthDenied)) {
+                            receiveQueue.onComplete();
+                            compositeDisposable.dispose();
+
                             System.err.println("login: " + "login failed");
-                            compositeDisposable.dispose(); // TODO: does this work?
                             onComplete.accept(false);
                         }
                     }
                 },
                 err -> {
-                    data.clear();
-                    device.disconnect();
-
                     System.err.println("login: " + err.getMessage());
                     onComplete.accept(false);
                 }
         );
         compositeDisposable.add(receiveSub);
-
-        return this;
     }
 
     @Override
     public void exec() {
-        init(onConnect -> {
+        super.exec();
+
+        // TODO: improve this
+        if (!device.isConnected()) {
+            System.out.println("login: connecting");
+            init(onConnect -> {
+                write(MiUUID.UPNP, CommandLogin.Request);
+                write(MiUUID.AVDTP, CommandLogin.SendingKey);
+            });
+        } else {
             write(MiUUID.UPNP, CommandLogin.Request);
             write(MiUUID.AVDTP, CommandLogin.SendingKey);
-        });
+        }
     }
 
-    public AuthCommand createCommand(byte[] command) {
-        return new AuthCommand(device, (DataLogin) data, command);
+    public AuthCommand createCommand(byte[] command, Consumer<byte[]> onResponse) {
+        receiveQueue.onComplete();
+        return new AuthCommand(scheduler, device, (DataLogin) data, command, onResponse);
     }
-
 }

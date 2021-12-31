@@ -19,6 +19,9 @@ package de.nandtek.miauth;
 
 import java.util.UUID;
 
+import io.reactivex.Observable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.BiConsumer;
 import io.reactivex.functions.Consumer;
 
 public interface IDevice {
@@ -28,5 +31,5 @@ public interface IDevice {
     boolean isConnected();
     void write(UUID uuid, byte[] data, Consumer<byte[]> onWriteSuccess);
     void read(UUID uuid, Consumer<byte[]> onReadSuccess);
-    void onNotify(UUID uuid, Consumer<byte[]> callback);
+    Observable<byte[]> onNotify(UUID uuid);
 }
