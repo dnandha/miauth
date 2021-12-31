@@ -21,63 +21,72 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
+import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
 import io.reactivex.Scheduler;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
-import io.reactivex.subjects.ReplaySubject;
+import io.reactivex.subjects.PublishSubject;
 
 public class AuthCommand extends AuthBase {
     private final byte[] command;
     private final Consumer<byte[]> onResponse;
 
-    public AuthCommand(Scheduler scheduler, IDevice device, DataLogin data, byte[] command, Consumer<byte[]> onResponse) {
-        super(scheduler, device, data);
+    public AuthCommand(IDevice device, DataLogin data, byte[] command, Consumer<byte[]> onResponse) {
+        super(device, data);
         this.command = command;
         this.onResponse = onResponse;
     }
 
     @Override
-    protected void setup() {
-        System.out.println("command: setting up");
-        final Disposable receiveSub = receiveQueue
-                //.observeOn(scheduler)
-                .timeout(2, TimeUnit.SECONDS)
-                .subscribe(message -> {
-                    System.out.println("Finish command");
-                    receiveQueue.onComplete();
-                    compositeDisposable.dispose();
+    protected void handleMessage(byte[] message) {
+        System.out.println("command: handling message");
 
-                    byte[] dec = ((DataLogin)data).decryptUart(message);
-                    onResponse.accept(Arrays.copyOfRange(dec, 3, dec.length-4));
-                }, err -> {
-                    receiveQueue.onComplete();
-                    compositeDisposable.dispose();
+        byte[] response = null;
+        if (receiveBuffer != null) {
 
-                    System.err.println("command: " + err.getMessage());
-                    onResponse.accept(null);
-                });
+            if (message == null) {
+                message = new byte[receiveBuffer.position()];
+                receiveBuffer.position(0);
+                receiveBuffer.get(message);
+            }
 
-        final Disposable rxSub = device.onNotify(MiUUID.RX).subscribe(this::receiveParcel);
+            byte[] dec = ((DataLogin) data).decryptUart(message);
+            System.out.println("got message:" + Util.bytesToHex(dec));
+            response = Arrays.copyOfRange(dec, 3, dec.length-4);
+        }
 
-        compositeDisposable.add(receiveSub);
-        compositeDisposable.add(rxSub);
+        try {
+            //stopNotifyTrigger.onNext(true);
+            compositeDisposable.dispose();
+
+            onResponse.accept(response);
+        } catch (Exception e) {
+            System.err.println("command: handle message error - " + e.getMessage());
+        }
     }
 
     @Override
     public void exec() {
-        super.exec();
+        final Disposable rxSub = device.onNotify(MiUUID.RX)
+                .takeUntil(stopNotifyTrigger)
+                .timeout(2, TimeUnit.SECONDS, Observable.create(emitter -> {
+                    handleMessage(null);
+                }))
+                .subscribe(
+                        this::receiveParcel,
+                        throwable -> {
+                            System.err.println("command error: " + throwable.getMessage());
+                        }
+                    );
+        compositeDisposable.add(rxSub);
 
         System.out.println("Send command");
         writeChunked(command);
     }
 
-    // TODO: generalize
     @Override
     protected void receiveParcel(byte[] data) {
-        if (receiveQueue.hasComplete()) {  // prevent multiple receives
-            return;
-        }
-
         System.out.println("recv message: "+ Util.bytesToHex(data));
         if ((data[0] & 0xff) == 0x55 && (data[1] & 0xff) != 0xaa) {
             receiveBuffer = ByteBuffer.allocate(0x10 * (ChunkSize+2));
@@ -86,12 +95,12 @@ public class AuthCommand extends AuthBase {
             receiveBuffer.put(data);
 
             // TODO: this is not guaranteed to be true
-            if (data.length < ChunkSize+2) {
-                byte[] message = new byte[receiveBuffer.position()];
-                receiveBuffer.position(0);
-                receiveBuffer.get(message);
-                receiveQueue.onNext(message);
-            }
+            //if (data.length < ChunkSize+2) {
+            //    byte[] message = new byte[receiveBuffer.position()];
+            //    receiveBuffer.position(0);
+            //    receiveBuffer.get(message);
+            //    handleMessage(message);
+            //}
         }
     }
 

@@ -19,94 +19,97 @@ package de.nandtek.miauth;
 
 import java.util.Arrays;
 
-import io.reactivex.Scheduler;
-import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 
 public class AuthLogin extends AuthBase {
     private final Consumer<Boolean> onComplete;
 
-    public AuthLogin(Scheduler scheduler, IDevice device, DataLogin data, Consumer<Boolean> onComplete) {
-        super(scheduler, device, data);
+    public AuthLogin(IDevice device, DataLogin data, Consumer<Boolean> onComplete) {
+        super(device, data);
         this.onComplete = onComplete;
     }
 
     @Override
-    protected void setup() {
-        System.out.println("login: setting up");
-        final Disposable receiveSub = receiveQueue
-                //.observeOn(scheduler)
-                .subscribe(message -> {
-                    if (!data.hasRemoteKey()) {
-                        if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
-                            writeParcel(MiUUID.AVDTP, data.getMyKey());
-                        } else if (Arrays.equals(message, CommandLogin.Received)) {
-                            System.out.println("login: " + "app key sent");
-                        } else if (Arrays.equals(message, CommandLogin.RespondKey)) {
-                            write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
-                        } else {
-                            data.setRemoteKey(message);
-                            System.out.println("login: " + "remote key received");
-                            write(MiUUID.AVDTP, CommandLogin.Received);
-                        }
-                    } else if (!data.hasRemoteInfo()) {
-                        if (Arrays.equals(message, CommandLogin.RespondInfo)) {
-                            write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
-                        } else {
-                            data.setRemoteInfo(message);
-                            System.out.println("login: " + "remote info received -> calculate");
-                            write(MiUUID.AVDTP, CommandLogin.Received, complete -> {
-                                write(MiUUID.AVDTP, CommandLogin.SendingCt);
-                            });
-                            data.calculate();
-                        }
-                    } else {
-                        if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
-                            writeParcel(MiUUID.AVDTP, data.getCt());
-                        } else if (Arrays.equals(message, CommandLogin.Received)) {
-                            System.out.println("login: " + "ct sent");
-                        } else if (Arrays.equals(message, CommandLogin.AuthConfirmed)) {
-                            receiveQueue.onComplete();
-                            compositeDisposable.dispose();
+    protected void handleMessage(byte[] message) {
+        System.out.println("login: handling message");
+        if (!data.hasRemoteKey()) {
+            if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
+                writeParcel(MiUUID.AVDTP, data.getMyKey());
+            } else if (Arrays.equals(message, CommandLogin.Received)) {
+                System.out.println("login: " + "app key sent");
+            } else if (Arrays.equals(message, CommandLogin.RespondKey)) {
+                write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
+            } else {
+                data.setRemoteKey(message);
+                System.out.println("login: " + "remote key received");
+                write(MiUUID.AVDTP, CommandLogin.Received);
+            }
+        } else if (!data.hasRemoteInfo()) {
+            if (Arrays.equals(message, CommandLogin.RespondInfo)) {
+                write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
+            } else {
+                data.setRemoteInfo(message);
+                System.out.println("login: " + "remote info received -> calculate");
+                write(MiUUID.AVDTP, CommandLogin.Received, complete -> {
+                    write(MiUUID.AVDTP, CommandLogin.SendingCt);
+                });
+                data.calculate();
+            }
+        } else {
+            if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
+                writeParcel(MiUUID.AVDTP, data.getCt());
+            } else if (Arrays.equals(message, CommandLogin.Received)) {
+                System.out.println("login: " + "ct sent");
+            } else if (Arrays.equals(message, CommandLogin.AuthConfirmed)) {
+                stopNotifyTrigger.onNext(true);
+                compositeDisposable.dispose();
 
-                            System.out.println("login: " + "login succeeded");
-                            onComplete.accept(true);
-                        } else if (Arrays.equals(message, CommandLogin.AuthDenied)) {
-                            receiveQueue.onComplete();
-                            compositeDisposable.dispose();
-
-                            System.err.println("login: " + "login failed");
-                            onComplete.accept(false);
-                        }
-                    }
-                },
-                err -> {
-                    System.err.println("login: " + err.getMessage());
-                    onComplete.accept(false);
+                System.out.println("login: " + "login succeeded");
+                try {
+                    onComplete.accept(true);
+                } catch (Exception e) {
+                    System.err.println(e.getMessage());
                 }
-        );
-        compositeDisposable.add(receiveSub);
+            } else if (Arrays.equals(message, CommandLogin.AuthDenied)) {
+                stopNotifyTrigger.onNext(true);
+                compositeDisposable.dispose();
+
+                System.err.println("login: " + "login failed");
+                try {
+                    onComplete.accept(false);
+                } catch (Exception e) {
+                    System.err.println(e.getMessage());
+                }
+            }
+        }
     }
 
     @Override
     public void exec() {
-        super.exec();
-
         // TODO: improve this
         if (!device.isConnected()) {
             System.out.println("login: connecting");
             init(onConnect -> {
                 write(MiUUID.UPNP, CommandLogin.Request);
                 write(MiUUID.AVDTP, CommandLogin.SendingKey);
+            }, onTimeout -> {
+                //onComplete.accept(false);  // not required, will be triggered by connection problem
             });
         } else {
+            subscribeNotify(timeout -> {
+                onComplete.accept(false);
+            });
             write(MiUUID.UPNP, CommandLogin.Request);
             write(MiUUID.AVDTP, CommandLogin.SendingKey);
         }
     }
 
-    public AuthCommand createCommand(byte[] command, Consumer<byte[]> onResponse) {
-        receiveQueue.onComplete();
-        return new AuthCommand(scheduler, device, (DataLogin) data, command, onResponse);
+    public AuthCommand toCommand(byte[] command, Consumer<byte[]> onResponse) {
+        if (!(data instanceof DataLogin)) {
+            System.err.println("login: can't create command, no login data");
+            return null;
+        }
+        compositeDisposable.dispose();
+        return new AuthCommand(device, (DataLogin) data, command, onResponse);
     }
 }

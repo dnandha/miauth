@@ -19,8 +19,8 @@ package de.nandtek.miauth;
 
 import java.nio.ByteBuffer;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
-import io.reactivex.Scheduler;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
@@ -28,15 +28,13 @@ import io.reactivex.subjects.PublishSubject;
 
 public class AuthBase {
     public static int ChunkSize = 18;
-    protected final Scheduler scheduler;
     protected IDevice device;
     protected final IData data;
-    protected final PublishSubject<byte[]> receiveQueue = PublishSubject.create();
     protected ByteBuffer receiveBuffer;
-    protected CompositeDisposable compositeDisposable = new CompositeDisposable();
+    protected final CompositeDisposable compositeDisposable = new CompositeDisposable();
+    protected final PublishSubject<Boolean> stopNotifyTrigger = PublishSubject.create();
 
-    public AuthBase(Scheduler scheduler, IDevice device, IData data) {
-        this.scheduler = scheduler;
+    public AuthBase(IDevice device, IData data) {
         this.device = device;
         this.data = data;
     }
@@ -68,21 +66,31 @@ public class AuthBase {
         }
     }
 
-    protected void init(Consumer<Boolean> callback) {
+    protected void subscribeNotify(Consumer<Throwable> onTimeout) {
+        System.out.println("Subscribe");
+        final Disposable upnpSub = device.onNotify(MiUUID.UPNP)
+                .takeUntil(stopNotifyTrigger)
+                .subscribe(
+                this::receiveParcel,
+                throwable -> System.err.println(throwable.getMessage())
+        );
+        final Disposable avdtpSub = device.onNotify(MiUUID.AVDTP)
+                .takeUntil(stopNotifyTrigger)
+                .timeout(3, TimeUnit.SECONDS)
+                .doOnError(onTimeout)
+                .subscribe(
+                        this::receiveParcel,
+                        throwable -> System.err.println("auth error: " + throwable.getMessage())
+                );
+
+        compositeDisposable.add(upnpSub);
+        compositeDisposable.add(avdtpSub);
+    }
+
+    protected void init(Consumer<Boolean> callback, Consumer<Throwable> onTimeout) {
         device.prepare();
         device.connect(connect -> {
-            System.out.println("Subscribe");
-            final Disposable upnpSub = device.onNotify(MiUUID.UPNP).subscribe(
-                    this::receiveParcel,
-                    throwable -> System.err.println(throwable.getMessage())
-                    );
-            final Disposable avdtpSub = device.onNotify(MiUUID.AVDTP).subscribe(
-                    this::receiveParcel,
-                    throwable -> System.err.println(throwable.getMessage())
-                    );
-
-            //compositeDisposable.add(upnpSub);
-            //compositeDisposable.add(avdtpSub);
+            subscribeNotify(onTimeout);
 
             callback.accept(connect);
         });
@@ -96,33 +104,31 @@ public class AuthBase {
             if (data.length == 6) {
                 receiveBuffer = ByteBuffer.allocate((data[4] & 0xff + 0x100 * data[5] & 0xff) * ChunkSize);
             }
-            receiveQueue.onNext(data);
+            handleMessage(data);
         } else if (frame > 0x10) {
-            receiveQueue.onNext(data);
+            handleMessage(data);
         } else {
             receiveBuffer.put(data, 2, data.length - 2);
             if (receiveBuffer.remaining() < ChunkSize) {
                 byte[] message = new byte[receiveBuffer.position()];
                 receiveBuffer.position(0);
                 receiveBuffer.get(message);
-                receiveQueue.onNext(message);
+                handleMessage(message);
             }
         }
     }
 
     public AuthBase reset() {
+        compositeDisposable.dispose();
         device.disconnect();
         data.clear();
-        //receiveQueue.onComplete();
-        compositeDisposable.dispose();
 
         return this;
     }
 
-    protected void setup() {
+    protected void handleMessage(byte[] message) {
     }
 
     public void exec() {
-        setup();
     }
 }
