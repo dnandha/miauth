@@ -1,19 +1,16 @@
-//
-// MiAuth - Authenticate and interact with Xiaomi devices over BLE
-// Copyright (C) 2021  Daljeet Nandha
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Copyright 2022 Daljeet Nandha
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 package de.nandtek.miauth;
 
@@ -33,6 +30,7 @@ public class AuthLogin extends AuthBase {
     protected void handleMessage(byte[] message) {
         System.out.println("login: handling message");
         if (!data.hasRemoteKey()) {
+            System.out.println("login: handling remote key");
             if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
                 writeParcel(MiUUID.AVDTP, data.getMyKey());
             } else if (Arrays.equals(message, CommandLogin.Received)) {
@@ -45,15 +43,25 @@ public class AuthLogin extends AuthBase {
                 write(MiUUID.AVDTP, CommandLogin.Received);
             }
         } else if (!data.hasRemoteInfo()) {
+            System.out.println("login: handling remote info");
             if (Arrays.equals(message, CommandLogin.RespondInfo)) {
                 write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
             } else {
                 data.setRemoteInfo(message);
                 System.out.println("login: " + "remote info received -> calculate");
-                write(MiUUID.AVDTP, CommandLogin.Received, complete -> {
-                    write(MiUUID.AVDTP, CommandLogin.SendingCt);
-                });
-                data.calculate();
+                if (!data.calculate()) {
+                    stopNotifyTrigger.onNext(true);
+                    System.out.println("login: " + "failed, invalid token");
+                    try {
+                        onComplete.accept(false);
+                    } catch (Exception e) {
+                        System.err.println(e.getMessage());
+                    }
+                } else {
+                    write(MiUUID.AVDTP, CommandLogin.Received, complete -> {
+                        write(MiUUID.AVDTP, CommandLogin.SendingCt);
+                    });
+                }
             }
         } else {
             if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
@@ -62,9 +70,9 @@ public class AuthLogin extends AuthBase {
                 System.out.println("login: " + "ct sent");
             } else if (Arrays.equals(message, CommandLogin.AuthConfirmed)) {
                 stopNotifyTrigger.onNext(true);
-                compositeDisposable.dispose();
+                //compositeDisposable.dispose();
 
-                System.out.println("login: " + "login succeeded");
+                System.out.println("login: " + "succeeded");
                 try {
                     onComplete.accept(true);
                 } catch (Exception e) {
@@ -72,9 +80,9 @@ public class AuthLogin extends AuthBase {
                 }
             } else if (Arrays.equals(message, CommandLogin.AuthDenied)) {
                 stopNotifyTrigger.onNext(true);
-                compositeDisposable.dispose();
+                //compositeDisposable.dispose();
 
-                System.err.println("login: " + "login failed");
+                System.err.println("login: " + "failed");
                 try {
                     onComplete.accept(false);
                 } catch (Exception e) {
@@ -90,26 +98,29 @@ public class AuthLogin extends AuthBase {
         if (!device.isConnected()) {
             System.out.println("login: connecting");
             init(onConnect -> {
+                System.out.println("login: sending request");
                 write(MiUUID.UPNP, CommandLogin.Request);
                 write(MiUUID.AVDTP, CommandLogin.SendingKey);
             }, onTimeout -> {
-                //onComplete.accept(false);  // not required, will be triggered by connection problem
+                //onComplete.accept(false);
             });
         } else {
+            System.out.println("login: subscribing");
             subscribeNotify(timeout -> {
-                onComplete.accept(false);
+                //onComplete.accept(false);
             });
+            System.out.println("login: sending request");
             write(MiUUID.UPNP, CommandLogin.Request);
             write(MiUUID.AVDTP, CommandLogin.SendingKey);
         }
     }
 
     public AuthCommand toCommand(byte[] command, Consumer<byte[]> onResponse) {
+        dispose();
         if (!(data instanceof DataLogin)) {
             System.err.println("login: can't create command, no login data");
             return null;
         }
-        compositeDisposable.dispose();
         return new AuthCommand(device, (DataLogin) data, command, onResponse);
     }
 }

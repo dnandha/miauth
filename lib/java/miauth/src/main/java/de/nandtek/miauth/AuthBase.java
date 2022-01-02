@@ -1,26 +1,25 @@
-//
-// MiAuth - Authenticate and interact with Xiaomi devices over BLE
-// Copyright (C) 2021  Daljeet Nandha
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Copyright 2022 Daljeet Nandha
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 package de.nandtek.miauth;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
@@ -45,7 +44,7 @@ public class AuthBase {
 
     protected void write(UUID uuid, byte[] data, Consumer<byte[]> onComplete) {
         device.write(uuid, data, resp -> {
-            System.out.println("write response: " + Util.bytesToHex(resp));
+            System.out.println("auth: write response " + Util.bytesToHex(resp));
             if (onComplete != null) {
                 onComplete.accept(resp);
             }
@@ -65,29 +64,38 @@ public class AuthBase {
             write(uuid, chunk);
         }
     }
-
-    protected void subscribeNotify(Consumer<Throwable> onTimeout) {
-        System.out.println("Subscribe");
+    protected void subscribeNotify(Consumer<Boolean> onTimeout) {
+        System.out.println("auth: subscribe");
         final Disposable upnpSub = device.onNotify(MiUUID.UPNP)
                 .takeUntil(stopNotifyTrigger)
                 .subscribe(
-                this::receiveParcel,
-                throwable -> System.err.println(throwable.getMessage())
+                    this::receiveParcel,
+                        Throwable::printStackTrace
         );
         final Disposable avdtpSub = device.onNotify(MiUUID.AVDTP)
                 .takeUntil(stopNotifyTrigger)
-                .timeout(3, TimeUnit.SECONDS)
-                .doOnError(onTimeout)
+                .timeout(3, TimeUnit.SECONDS, Observable.create(emitter -> {
+                    System.out.println("auth: subscription timeout");
+                    stopNotifyTrigger.onNext(true);
+                }))
                 .subscribe(
                         this::receiveParcel,
-                        throwable -> System.err.println("auth error: " + throwable.getMessage())
+                        Throwable::printStackTrace
                 );
+
+        final Disposable stopSub = stopNotifyTrigger.subscribe(
+                next -> {
+                    System.out.println("auth: subscription stopped");
+                    onTimeout.accept(true);
+                    //compositeDisposable.dispose();
+        });
 
         compositeDisposable.add(upnpSub);
         compositeDisposable.add(avdtpSub);
+        compositeDisposable.add(stopSub);
     }
 
-    protected void init(Consumer<Boolean> callback, Consumer<Throwable> onTimeout) {
+    protected void init(Consumer<Boolean> callback, Consumer<Boolean> onTimeout) {
         device.prepare();
         device.connect(connect -> {
             subscribeNotify(onTimeout);
@@ -97,9 +105,9 @@ public class AuthBase {
     }
 
     protected void receiveParcel(byte[] data) {
-        System.out.println("recv message: " + Util.bytesToHex(data));
+        System.out.println("auth: recv message " + Util.bytesToHex(data));
         int frame = data[0] & 0xff + 0x100 * data[1] & 0xff;
-        System.out.println("recv frame: " + frame);
+        System.out.println("auth: recv frame " + frame);
         if (frame == 0) {
             if (data.length == 6) {
                 receiveBuffer = ByteBuffer.allocate((data[4] & 0xff + 0x100 * data[5] & 0xff) * ChunkSize);
@@ -116,6 +124,10 @@ public class AuthBase {
                 handleMessage(message);
             }
         }
+    }
+
+    public void dispose() {
+        compositeDisposable.dispose();
     }
 
     public AuthBase reset() {

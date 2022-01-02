@@ -1,19 +1,16 @@
-//
-// MiAuth - Authenticate and interact with Xiaomi devices over BLE
-// Copyright (C) 2021  Daljeet Nandha
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Copyright 2022 Daljeet Nandha
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 package de.nandtek.miauth;
 
@@ -22,12 +19,12 @@ import java.util.Arrays;
 public class DataLogin implements IData {
     private final Data parent;
     private byte[] loginKey = null;
-    private byte[] remoteLoginKey = null;
+    private byte[] remoteKey = null;
     private byte[] appKey = null;
     private byte[] devKey = null;
     private byte[] appIv = null;
     private byte[] devIv = null;
-    private byte[] remoteLoginInfo = null;
+    private byte[] remoteInfo = null;
     private byte[] ct = null;
 
     private int it = 0;
@@ -43,9 +40,9 @@ public class DataLogin implements IData {
     }
 
     @Override
-    public void calculate() {
-        byte[] salt = Util.combineBytes(loginKey, remoteLoginKey);
-        byte[] saltInv = Util.combineBytes(remoteLoginKey, loginKey);
+    public boolean calculate() {
+        byte[] salt = Util.combineBytes(loginKey, remoteKey);
+        byte[] saltInv = Util.combineBytes(remoteKey, loginKey);
 
         byte[] derived = Crypto.deriveSecret(parent.token, salt = salt);
         devKey = Arrays.copyOfRange(derived, 0, 16);
@@ -56,31 +53,43 @@ public class DataLogin implements IData {
 
         byte[] expectedRemoteInfo = Crypto.hash(devKey, saltInv);
 
-        if (!Arrays.equals(expectedRemoteInfo, remoteLoginInfo)) {
-            throw new AssertionError("Unexpected remote info");
+        if (!Arrays.equals(expectedRemoteInfo, remoteInfo)) {
+            System.err.println("login: unexpected remote info");
+            return false;
         }
 
         ct = Crypto.hash(appKey, salt);
+        return true;
     }
 
     @Override
     public boolean hasRemoteInfo() {
-        return remoteLoginInfo != null;
+        return remoteInfo != null;
     }
 
     @Override
     public boolean hasRemoteKey() {
-        return remoteLoginKey != null;
+        return remoteKey != null;
     }
 
     @Override
     public void setRemoteInfo(byte[] data) {
-        remoteLoginInfo = data;
+        remoteInfo = data;
     }
 
     @Override
     public void setRemoteKey(byte[] data) {
-        remoteLoginKey = data;
+        remoteKey = data;
+    }
+
+    @Override
+    public byte[] getRemoteKey() {
+        return remoteKey;
+    }
+
+    @Override
+    public byte[] getRemoteInfo() {
+        return remoteInfo;
     }
 
     @Override
@@ -103,15 +112,21 @@ public class DataLogin implements IData {
 
     @Override
     public void clear() {
-        remoteLoginKey = null;
-        remoteLoginInfo = null;
+        remoteKey = null;
+        remoteInfo = null;
     }
 
     public byte[] encryptUart(byte[] msg) {
+        if (appKey == null || appIv == null) {
+            return new byte[0]; // todo
+        }
         return Crypto.encryptUart(appKey, appIv, msg, it++);
     }
 
     public byte[] decryptUart(byte[] msg) {
+        if (devKey == null || devIv == null) {
+            return new byte[0]; // todo
+        }
         return Crypto.decryptUart(devKey, devIv, msg);
     }
 }

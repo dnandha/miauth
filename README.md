@@ -21,6 +21,11 @@ This work would not have been possible without the following projects:
 * @atc1441 https://github.com/atc1441/ATC_MiThermometer
 
 ## License
+This branch comes without the Nb protocol/crypto library, which is AGPL licensed.
+Since I'm no longer using any licensed material I'm free to choose a better suited license.
+
+The Apache2 license applies to the code in this branch.
+
 See LICENSE.md
 
 ## Disclaimer

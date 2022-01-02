@@ -1,19 +1,16 @@
-//
-// MiAuth - Authenticate and interact with Xiaomi devices over BLE
-// Copyright (C) 2021  Daljeet Nandha
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Copyright 2022 Daljeet Nandha
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//     http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 package de.nandtek.miauth;
 
@@ -34,6 +31,7 @@ public class AuthRegister extends AuthBase {
     protected void handleMessage(byte[] message) {
         System.out.println("register: handling message - " + Util.bytesToHex(message));
         if (!data.hasRemoteInfo()) {
+            System.out.println("register: handling remote info");
             if (Arrays.equals(message, CommandRegister.SendingCt)) {
                 write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
             } else {
@@ -46,6 +44,7 @@ public class AuthRegister extends AuthBase {
                 data.setRemoteInfo(message);
             }
         } else if (!data.hasRemoteKey()) {
+            System.out.println("register: handling remote key");
             if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
                 writeParcel(MiUUID.AVDTP, data.getMyKey());
             } else if (Arrays.equals(message, CommandLogin.Received)) {
@@ -68,9 +67,9 @@ public class AuthRegister extends AuthBase {
                 write(MiUUID.UPNP, CommandRegister.AuthRequest);
             } else if (Arrays.equals(message, CommandRegister.AuthConfirmed)) {
                 stopNotifyTrigger.onNext(true);
-                compositeDisposable.dispose();
+                //compositeDisposable.dispose();
 
-                System.out.println("register: " + "registration succeeded");
+                System.out.println("register: " + "succeeded");
                 try {
                     onComplete.accept(true);
                 } catch (Exception e) {
@@ -78,9 +77,9 @@ public class AuthRegister extends AuthBase {
                 }
             } else if (Arrays.equals(message, CommandRegister.AuthDenied)) {
                 stopNotifyTrigger.onNext(true);
-                compositeDisposable.dispose();
+                //compositeDisposable.dispose();
 
-                System.err.println("register: " + "registration failed");
+                System.err.println("register: " + "failed");
                 try {
                     onComplete.accept(false);
                 } catch (Exception e) {
@@ -98,24 +97,27 @@ public class AuthRegister extends AuthBase {
         if (!device.isConnected()) {
             System.out.println("register: connecting");
             init(onConnect -> {
+                System.out.println("register: sending request");
                 write(MiUUID.UPNP, CommandRegister.GetInfo);
             }, timeout -> {
                 onComplete.accept(false);
             });
         } else {
+            System.out.println("register: subscribing");
             subscribeNotify(timeout -> {
+                System.out.println("register: sending request");
                 onComplete.accept(false);
             });
             write(MiUUID.UPNP, CommandRegister.GetInfo);
         }
     }
 
-    public AuthRegister clone() {
-        return new AuthRegister(device, (DataRegister) data, onComplete);
+    public AuthRegister freshClone() {
+        return new AuthRegister(device, new DataRegister(data.getParent()), onComplete);
     }
 
     public AuthLogin toLogin(DataLogin dataLogin, Consumer<Boolean> onComplete) {
-        compositeDisposable.dispose();
+        dispose();
         return new AuthLogin(device, dataLogin, onComplete);
     }
 }
