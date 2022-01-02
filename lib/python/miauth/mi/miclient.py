@@ -70,6 +70,9 @@ class MiClient(btle.DefaultDelegate):
         self.uart_it = 0
 
     def handleNotification(self, handle, data):
+        if not data:
+            return
+
         self.main_handler(data)
 
     def enable_notify(self, ch, reset=False):
@@ -133,9 +136,12 @@ class MiClient(btle.DefaultDelegate):
             f()
 
     def main_handler(self, data):
-        frm = data[0] + 0x100 * data[1]
         if self.debug:
-            print("<-", data.hex(), frm, self.get_state())
+            print("<-", data.hex(), self.get_state())
+
+        frm = data[0]
+        if len(data) > 1:
+            frm += 0x100 * data[1]
 
         if self.get_state() in [MiClient.State.RECV_INFO,
                                 MiClient.State.RECV_KEY]:
@@ -351,7 +357,7 @@ class MiClient(btle.DefaultDelegate):
         if not self.keys:
             self.bt_write_chunked(self.ch_tx, cmd)
 
-            while self.p.waitForNotifications(2.0):
+            while self.p.waitForNotifications(1.0):
                 continue
 
             if not self.received_data:
@@ -366,11 +372,13 @@ class MiClient(btle.DefaultDelegate):
         self.bt_write_chunked(self.ch_tx, res)
         self.uart_it += 1
 
-        while self.p.waitForNotifications(2.0):
+        while self.p.waitForNotifications(1.0):
             continue
 
         if not self.received_data:
-            raise Exception("No answer received. Firmware not supported.")
+            #raise Exception("No answer received. Firmware not supported.")
+            print("No answer received")
+            return
 
         return MiCrypto.decrypt_uart(
             self.keys['dev_key'],
