@@ -29,9 +29,10 @@ public class AuthRegister extends AuthBase {
 
     @Override
     protected void handleMessage(byte[] message) {
-        System.out.println("register: handling message - " + Util.bytesToHex(message));
+       System.out.println("register: handling message - " + Util.bytesToHex(message));
+
         if (!data.hasRemoteInfo()) {
-            System.out.println("register: handling remote info");
+            updateProgress("register: handling remote info (3/9)");
             if (Arrays.equals(message, CommandRegister.SendingCt)) {
                 write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
             } else {
@@ -40,24 +41,25 @@ public class AuthRegister extends AuthBase {
                 });
                 write(MiUUID.UPNP, CommandRegister.KeyExchange);
 
-                System.out.println("remote info received");
+                updateProgress("register: remote info received (4/9)");
                 data.setRemoteInfo(message);
             }
         } else if (!data.hasRemoteKey()) {
-            System.out.println("register: handling remote key");
+            updateProgress("register: handling remote key (5/9)");
             if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
                 writeParcel(MiUUID.AVDTP, data.getMyKey());
             } else if (Arrays.equals(message, CommandLogin.Received)) {
-                System.out.println("register: " + "public key sent");
+                updateProgress("register: " + "public key sent (6/9)");
             } else {
                 if (Arrays.equals(message, CommandRegister.SendingKey)) {
                     write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
                 } else {
                     data.setRemoteKey(message);
-                    System.out.println("register: " + "remote key received -> calculate");
+                    updateProgress("register: " + "remote key received -> calculate (7/9)");
                     data.calculate();
                     write(MiUUID.AVDTP, CommandLogin.Received);
                     write(MiUUID.AVDTP, CommandRegister.SendingCt);
+                    updateProgress("register: " + "ct sent (8/9)");
                 }
             }
         } else {
@@ -69,7 +71,7 @@ public class AuthRegister extends AuthBase {
                 stopNotifyTrigger.onNext(true);
                 //compositeDisposable.dispose();
 
-                System.out.println("register: " + "succeeded");
+                updateProgress("register: succeeded (9/9)");
                 try {
                     onComplete.accept(true);
                 } catch (Exception e) {
@@ -79,7 +81,7 @@ public class AuthRegister extends AuthBase {
                 stopNotifyTrigger.onNext(true);
                 //compositeDisposable.dispose();
 
-                System.err.println("register: " + "failed");
+                updateProgress("register: failed (9/9)");
                 try {
                     onComplete.accept(false);
                 } catch (Exception e) {
@@ -95,19 +97,19 @@ public class AuthRegister extends AuthBase {
 
         // TODO: improve this
         if (!device.isConnected()) {
-            System.out.println("register: connecting");
+            updateProgress("register: connecting (1/9)");
             init(onConnect -> {
-                System.out.println("register: sending request");
+                updateProgress("register: sending request (2/9)");
                 write(MiUUID.UPNP, CommandRegister.GetInfo);
             }, timeout -> {
                 onComplete.accept(false);
             });
         } else {
-            System.out.println("register: subscribing");
+            updateProgress("register: subscribing (1/9)");
             subscribeNotify(timeout -> {
-                System.out.println("register: sending request");
                 onComplete.accept(false);
             });
+            updateProgress("register: sending request (2/9)");
             write(MiUUID.UPNP, CommandRegister.GetInfo);
         }
     }

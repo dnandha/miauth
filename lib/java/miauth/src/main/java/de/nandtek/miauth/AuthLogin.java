@@ -30,28 +30,28 @@ public class AuthLogin extends AuthBase {
     protected void handleMessage(byte[] message) {
         System.out.println("login: handling message");
         if (!data.hasRemoteKey()) {
-            System.out.println("login: handling remote key");
+            updateProgress("login: handling remote key (3/9)");
             if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
                 writeParcel(MiUUID.AVDTP, data.getMyKey());
             } else if (Arrays.equals(message, CommandLogin.Received)) {
-                System.out.println("login: " + "app key sent");
+                updateProgress("login: app key sent (4/9)");
             } else if (Arrays.equals(message, CommandLogin.RespondKey)) {
                 write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
             } else {
                 data.setRemoteKey(message);
-                System.out.println("login: " + "remote key received");
+                updateProgress("login: " + "remote key received (5/9)");
                 write(MiUUID.AVDTP, CommandLogin.Received);
             }
         } else if (!data.hasRemoteInfo()) {
-            System.out.println("login: handling remote info");
+            updateProgress("login: handling remote info (6/9)");
             if (Arrays.equals(message, CommandLogin.RespondInfo)) {
                 write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
             } else {
                 data.setRemoteInfo(message);
-                System.out.println("login: " + "remote info received -> calculate");
+                updateProgress("login: remote info received -> calculate (7/9)");
                 if (!data.calculate()) {
                     stopNotifyTrigger.onNext(true);
-                    System.out.println("login: " + "failed, invalid token");
+                    updateProgress("login: failed, invalid token (9/9)");
                     try {
                         onComplete.accept(false);
                     } catch (Exception e) {
@@ -67,12 +67,12 @@ public class AuthLogin extends AuthBase {
             if (Arrays.equals(message, CommandLogin.ReceiveReady)) {
                 writeParcel(MiUUID.AVDTP, data.getCt());
             } else if (Arrays.equals(message, CommandLogin.Received)) {
-                System.out.println("login: " + "ct sent");
+                updateProgress("login: " + "ct sent (8/9)");
             } else if (Arrays.equals(message, CommandLogin.AuthConfirmed)) {
                 stopNotifyTrigger.onNext(true);
                 //compositeDisposable.dispose();
 
-                System.out.println("login: " + "succeeded");
+                updateProgress("login: succeeded (9/9)");
                 try {
                     onComplete.accept(true);
                 } catch (Exception e) {
@@ -82,7 +82,7 @@ public class AuthLogin extends AuthBase {
                 stopNotifyTrigger.onNext(true);
                 //compositeDisposable.dispose();
 
-                System.err.println("login: " + "failed");
+                updateProgress("login: failed (9/9)");
                 try {
                     onComplete.accept(false);
                 } catch (Exception e) {
@@ -96,20 +96,20 @@ public class AuthLogin extends AuthBase {
     public void exec() {
         // TODO: improve this
         if (!device.isConnected()) {
-            System.out.println("login: connecting");
+            updateProgress("login: connecting (1/9)");
             init(onConnect -> {
-                System.out.println("login: sending request");
+                updateProgress("login: sending request (2/9)");
                 write(MiUUID.UPNP, CommandLogin.Request);
                 write(MiUUID.AVDTP, CommandLogin.SendingKey);
             }, onTimeout -> {
-                //onComplete.accept(false);
+                //onComplete.accept(false);  // TODO
             });
         } else {
-            System.out.println("login: subscribing");
+            updateProgress("login: subscribing (1/9)");
             subscribeNotify(timeout -> {
-                //onComplete.accept(false);
+                //onComplete.accept(false);  // TODO
             });
-            System.out.println("login: sending request");
+            updateProgress("login: sending request (2/9)");
             write(MiUUID.UPNP, CommandLogin.Request);
             write(MiUUID.AVDTP, CommandLogin.SendingKey);
         }

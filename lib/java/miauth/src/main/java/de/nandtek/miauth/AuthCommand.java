@@ -40,7 +40,7 @@ public class AuthCommand extends AuthBase {
             System.out.println("command: handling message " + Util.bytesToHex(message));
 
             byte[] dec = ((DataLogin) data).decryptUart(message);
-            System.out.println("command: decoded message:" + Util.bytesToHex(dec));
+            updateProgress("command: (2/2) decoded response:" + Util.bytesToHex(dec));
             response = Arrays.copyOfRange(dec, 3, dec.length - 4);
         }
 
@@ -77,7 +77,7 @@ public class AuthCommand extends AuthBase {
                     );
         compositeDisposable.add(rxSub);
 
-        System.out.println("command: writing " + Util.bytesToHex(command));
+        updateProgress("command: (1/2) sending command " + Util.bytesToHex(command));
         writeChunked(command);
     }
 

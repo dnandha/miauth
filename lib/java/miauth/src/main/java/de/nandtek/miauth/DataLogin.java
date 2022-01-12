@@ -44,7 +44,7 @@ public class DataLogin implements IData {
         byte[] salt = Util.combineBytes(loginKey, remoteKey);
         byte[] saltInv = Util.combineBytes(remoteKey, loginKey);
 
-        byte[] derived = Crypto.deriveSecret(parent.token, salt = salt);
+        byte[] derived = Crypto.deriveSecret(parent.token, salt);
         devKey = Arrays.copyOfRange(derived, 0, 16);
         appKey = Arrays.copyOfRange(derived, 16, 32);
         devIv = Arrays.copyOfRange(derived, 32, 36);
@@ -60,6 +60,11 @@ public class DataLogin implements IData {
 
         ct = Crypto.hash(appKey, salt);
         return true;
+    }
+
+    @Override
+    public boolean hasMyKey() {
+        return this.loginKey != null;
     }
 
     @Override

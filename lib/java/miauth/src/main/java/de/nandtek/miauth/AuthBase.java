@@ -33,9 +33,29 @@ public class AuthBase {
     protected final CompositeDisposable compositeDisposable = new CompositeDisposable();
     protected final PublishSubject<Boolean> stopNotifyTrigger = PublishSubject.create();
 
+    String progress;
+    private Consumer<String> onProgressUpdate;
+
     public AuthBase(IDevice device, IData data) {
         this.device = device;
         this.data = data;
+    }
+
+    public void updateProgress(String p) {
+        System.out.println(p);
+        progress = p;
+
+        if (onProgressUpdate != null) {
+            try {
+                onProgressUpdate.accept(progress);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void setProgressCallback(Consumer<String> onProgressUpdate) {
+        this.onProgressUpdate = onProgressUpdate;
     }
 
     protected void write(UUID uuid, byte[] data) {

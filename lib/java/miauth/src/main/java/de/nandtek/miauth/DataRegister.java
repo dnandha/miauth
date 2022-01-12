@@ -51,6 +51,11 @@ public class DataRegister implements IData {
     }
 
     @Override
+    public boolean hasMyKey() {
+        return myKeys != null;
+    }
+
+    @Override
     public boolean hasRemoteInfo() {
         return remoteInfo != null;
     }

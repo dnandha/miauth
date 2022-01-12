@@ -14,17 +14,17 @@
 //
 package de.nandtek.miauth;
 
-import org.spongycastle.crypto.digests.SHA256Digest;
-import org.spongycastle.crypto.generators.HKDFBytesGenerator;
-import org.spongycastle.crypto.params.HKDFParameters;
-import org.spongycastle.jce.ECNamedCurveTable;
-import org.spongycastle.jce.interfaces.ECPrivateKey;
-import org.spongycastle.jce.interfaces.ECPublicKey;
-import org.spongycastle.jce.provider.BouncyCastleProvider;
-import org.spongycastle.jce.spec.ECNamedCurveParameterSpec;
-import org.spongycastle.jce.spec.ECPrivateKeySpec;
-import org.spongycastle.jce.spec.ECPublicKeySpec;
-import org.spongycastle.math.ec.ECPoint;
+import org.bouncycastle.crypto.digests.SHA256Digest;
+import org.bouncycastle.crypto.generators.HKDFBytesGenerator;
+import org.bouncycastle.crypto.params.HKDFParameters;
+import org.bouncycastle.jce.ECNamedCurveTable;
+import org.bouncycastle.jce.interfaces.ECPrivateKey;
+import org.bouncycastle.jce.interfaces.ECPublicKey;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
+import org.bouncycastle.jce.spec.ECPrivateKeySpec;
+import org.bouncycastle.jce.spec.ECPublicKeySpec;
+import org.bouncycastle.math.ec.ECPoint;
 
 import java.math.BigInteger;
 import java.security.InvalidAlgorithmParameterException;
@@ -51,8 +51,13 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+
 public class Crypto {
-    static { Security.addProvider(new BouncyCastleProvider()); }
+    static {
+        Security.removeProvider("BC");
+        Security.insertProviderAt(new BouncyCastleProvider(), 1);
+    }
+
 
     public static byte[] generateRandomKey() {
         return generateRandomKey(16);
@@ -66,10 +71,10 @@ public class Crypto {
 
     public static KeyPair generateKeyPair() {
         try {
-            KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", "SC");
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH");
             kpg.initialize(new ECGenParameterSpec("SECP256R1"));
             return kpg.generateKeyPair();
-        } catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException | NoSuchProviderException e) {
+        } catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException e) {
             e.printStackTrace();
         }
 
@@ -175,13 +180,13 @@ public class Crypto {
         SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
 
         try {
-            Cipher cipher = Cipher.getInstance("AES/CCM/NoPadding", "SC");
+            Cipher cipher = Cipher.getInstance("AES/CCM/NoPadding");
             cipher.init(mode, keySpec, paramSpec);
             if (aad != null) {
                 cipher.updateAAD(aad);
             }
             return cipher.doFinal(data);
-        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidAlgorithmParameterException | InvalidKeyException | BadPaddingException | IllegalBlockSizeException | NoSuchProviderException e) {
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidAlgorithmParameterException | InvalidKeyException | BadPaddingException | IllegalBlockSizeException e) {
             e.printStackTrace();
         }
 
