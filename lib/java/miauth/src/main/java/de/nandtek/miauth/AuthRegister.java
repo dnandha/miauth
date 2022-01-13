@@ -36,9 +36,8 @@ public class AuthRegister extends AuthBase {
             if (Arrays.equals(message, CommandRegister.SendingCt)) {
                 write(MiUUID.AVDTP, CommandLogin.ReceiveReady);
             } else {
-                write(MiUUID.AVDTP, CommandLogin.Received, complete -> {
-                    write(MiUUID.AVDTP, CommandRegister.SendingKey);
-                });
+                write(MiUUID.AVDTP, CommandLogin.Received, complete ->
+                        write(MiUUID.AVDTP, CommandRegister.SendingKey));
                 write(MiUUID.UPNP, CommandRegister.KeyExchange);
 
                 updateProgress("register: remote info received (4/9)");
@@ -101,21 +100,13 @@ public class AuthRegister extends AuthBase {
             init(onConnect -> {
                 updateProgress("register: sending request (2/9)");
                 write(MiUUID.UPNP, CommandRegister.GetInfo);
-            }, timeout -> {
-                onComplete.accept(false);
-            });
+            }, timeout -> onComplete.accept(false));
         } else {
             updateProgress("register: subscribing (1/9)");
-            subscribeNotify(timeout -> {
-                onComplete.accept(false);
-            });
+            subscribeNotify(timeout -> onComplete.accept(false));
             updateProgress("register: sending request (2/9)");
             write(MiUUID.UPNP, CommandRegister.GetInfo);
         }
-    }
-
-    public AuthRegister freshClone() {
-        return new AuthRegister(device, new DataRegister(data.getParent()), onComplete);
     }
 
     public AuthLogin toLogin(DataLogin dataLogin, Consumer<Boolean> onComplete) {

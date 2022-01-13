@@ -58,9 +58,8 @@ public class AuthLogin extends AuthBase {
                         System.err.println(e.getMessage());
                     }
                 } else {
-                    write(MiUUID.AVDTP, CommandLogin.Received, complete -> {
-                        write(MiUUID.AVDTP, CommandLogin.SendingCt);
-                    });
+                    write(MiUUID.AVDTP, CommandLogin.Received, complete ->
+                            write(MiUUID.AVDTP, CommandLogin.SendingCt));
                 }
             }
         } else {

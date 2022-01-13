@@ -18,7 +18,7 @@ import java.util.Arrays;
 
 public class DataLogin implements IData {
     private final Data parent;
-    private byte[] loginKey = null;
+    private final byte[] loginKey;
     private byte[] remoteKey = null;
     private byte[] appKey = null;
     private byte[] devKey = null;

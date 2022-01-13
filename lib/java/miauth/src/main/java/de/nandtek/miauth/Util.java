@@ -35,14 +35,14 @@ public class Util {
 
     public static String bytesToHex(byte[] byteArray)
     {
-        String hex = "";
+        StringBuilder hex = new StringBuilder();
 
         // Iterating through each byte in the array
         for (byte i : byteArray) {
-            hex += String.format("%02X", i);
+            hex.append(String.format("%02X", i));
         }
 
-        return hex.toLowerCase();
+        return hex.toString().toLowerCase();
     }
 
     public static int bytesToInt(byte[] bytes) {

@@ -19,9 +19,9 @@ import java.security.PublicKey;
 import java.util.Arrays;
 
 public class DataRegister implements IData {
-    private Data parent;
+    private final Data parent;
 
-    private KeyPair myKeys = null;
+    private final KeyPair myKeys;
     private byte[] remoteInfo = null;
     private PublicKey remoteKey = null;
     private byte[] ct = null;

@@ -15,7 +15,6 @@
 package de.nandtek.miauth;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -150,12 +149,10 @@ public class AuthBase {
         compositeDisposable.dispose();
     }
 
-    public AuthBase reset() {
+    public void reset() {
         compositeDisposable.dispose();
         device.disconnect();
         data.clear();
-
-        return this;
     }
 
     protected void handleMessage(byte[] message) {
