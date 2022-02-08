@@ -113,13 +113,4 @@ public class AuthLogin extends AuthBase {
             write(MiUUID.AVDTP, CommandLogin.SendingKey);
         }
     }
-
-    public AuthCommand toCommand(byte[] command, Consumer<byte[]> onResponse) {
-        dispose();
-        if (!(data instanceof DataLogin)) {
-            System.err.println("login: can't create command, no login data");
-            return null;
-        }
-        return new AuthCommand(device, (DataLogin) data, command, onResponse);
-    }
 }

@@ -25,11 +25,13 @@ import io.reactivex.functions.Consumer;
 public class AuthCommand extends AuthBase {
     private final byte[] command;
     private final Consumer<byte[]> onResponse;
+    private final boolean waitTimeout;
 
-    public AuthCommand(IDevice device, DataLogin data, byte[] command, Consumer<byte[]> onResponse) {
+    public AuthCommand(IDevice device, IData data, byte[] command, Consumer<byte[]> onResponse, boolean waitTimeout) {
         super(device, data);
         this.command = command;
         this.onResponse = onResponse;
+        this.waitTimeout = waitTimeout;
     }
 
     @Override
@@ -39,7 +41,7 @@ public class AuthCommand extends AuthBase {
         if (message != null) {
             System.out.println("command: handling message " + Util.bytesToHex(message));
 
-            byte[] dec = ((DataLogin) data).decryptUart(message);
+            byte[] dec = data.getParent().decryptUart(message);
             updateProgress("command: (2/2) decoded response:" + Util.bytesToHex(dec));
             response = Arrays.copyOfRange(dec, 3, dec.length - 4);
         }
@@ -50,35 +52,46 @@ public class AuthCommand extends AuthBase {
 
             onResponse.accept(response);
         } catch (Exception e) {
-            System.err.println("command: handle message error - " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     @Override
     public void exec() {
-        final Disposable rxSub = device.onNotify(MiUUID.RX)
-                .doOnError(throwable -> handleMessage(null))
-                .takeUntil(stopNotifyTrigger)
-                .timeout(2, TimeUnit.SECONDS, Observable.create(emitter -> {
-                    System.out.println("command: subscription timeout");
-                    //stopNotifyTrigger.onNext(true);
-
-                    byte[] message = null;
-                    if (receiveBuffer != null && !receiveBuffer.hasRemaining()) {
-                        message = new byte[receiveBuffer.position()];
-                        receiveBuffer.position(0);
-                        receiveBuffer.get(message);
-                    }
-                    handleMessage(message);
-                }))
-                .subscribe(
-                        this::receiveParcel,
-                        Throwable::printStackTrace
+        if (device.isConnected()) {
+            final Disposable rxSub = device.onNotify(MiUUID.RX)
+                    //.doOnError(throwable -> handleMessage(null))  // TODO: for what was this?
+                    .takeUntil(stopNotifyTrigger)
+                    .timeout(2, TimeUnit.SECONDS, Observable.create(emitter -> {
+                        //stopNotifyTrigger.onNext(true);
+                        if (waitTimeout) {
+                            System.out.println("command: subscription timeout");
+                            preHandleMessage();
+                        } else {
+                            handleMessage(null);
+                        }
+                    }))
+                    .subscribe(
+                            this::receiveParcel,
+                            Throwable::printStackTrace
                     );
-        compositeDisposable.add(rxSub);
+            compositeDisposable.add(rxSub);
 
-        updateProgress("command: (1/2) sending command " + Util.bytesToHex(command));
-        writeChunked(command);
+            updateProgress("command: (1/2) sending command " + Util.bytesToHex(command));
+            writeChunked(command);
+        } else {
+            // TODO
+        }
+    }
+
+    private void preHandleMessage() {
+        byte[] message = null;
+        if (receiveBuffer != null && !receiveBuffer.hasRemaining()) {
+            message = new byte[receiveBuffer.position()];
+            receiveBuffer.position(0);
+            receiveBuffer.get(message);
+        }
+        handleMessage(message);
     }
 
     @Override
@@ -96,13 +109,13 @@ public class AuthCommand extends AuthBase {
             receiveBuffer.put(data);
         }
 
-        if (!receiveBuffer.hasRemaining()) {
-            // handle this on timeout to avoid double subscriptions
+        if (!waitTimeout && !receiveBuffer.hasRemaining()) {
+            preHandleMessage();
         }
     }
 
     private void writeChunked(byte[] cmd) {
-        ByteBuffer buf = ByteBuffer.wrap(((DataLogin)data).encryptUart(cmd));
+        ByteBuffer buf = ByteBuffer.wrap(data.getParent().encryptUart(cmd));
         while (buf.remaining() > 0) {
             int len = Math.min(buf.remaining(), ChunkSize+2);
             byte[] chunk = new byte[len];

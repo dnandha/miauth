@@ -133,6 +133,9 @@ class MiClient(btle.DefaultDelegate):
             f()
 
     def main_handler(self, data):
+        if len(data) == 0:
+            return
+
         frm = data[0] + 0x100 * data[1]
         if self.debug:
             print("<-", data.hex(), frm, self.get_state())

@@ -20,14 +20,8 @@ public class DataLogin implements IData {
     private final Data parent;
     private final byte[] loginKey;
     private byte[] remoteKey = null;
-    private byte[] appKey = null;
-    private byte[] devKey = null;
-    private byte[] appIv = null;
-    private byte[] devIv = null;
     private byte[] remoteInfo = null;
     private byte[] ct = null;
-
-    private int it = 0;
 
     public DataLogin(Data parent, byte[] loginKey) {
         this.parent = parent;
@@ -45,14 +39,16 @@ public class DataLogin implements IData {
         byte[] saltInv = Util.combineBytes(remoteKey, loginKey);
 
         byte[] derived = Crypto.deriveSecret(parent.token, salt);
-        devKey = Arrays.copyOfRange(derived, 0, 16);
-        appKey = Arrays.copyOfRange(derived, 16, 32);
-        devIv = Arrays.copyOfRange(derived, 32, 36);
-        appIv = Arrays.copyOfRange(derived, 36, 40);
+        byte[] devKey = Arrays.copyOfRange(derived, 0, 16);
+        byte[] appKey = Arrays.copyOfRange(derived, 16, 32);
+        byte[] devIv = Arrays.copyOfRange(derived, 32, 36);
+        byte[] appIv = Arrays.copyOfRange(derived, 36, 40);
         byte[] junk = Arrays.copyOfRange(derived, 40, 50);
 
-        byte[] expectedRemoteInfo = Crypto.hash(devKey, saltInv);
+        getParent().setKeys(devKey, appKey);
+        getParent().setIvs(devIv, appIv);
 
+        byte[] expectedRemoteInfo = Crypto.hash(devKey, saltInv);
         if (!Arrays.equals(expectedRemoteInfo, remoteInfo)) {
             System.err.println("login: unexpected remote info");
             return false;
@@ -119,19 +115,5 @@ public class DataLogin implements IData {
     public void clear() {
         remoteKey = null;
         remoteInfo = null;
-    }
-
-    public byte[] encryptUart(byte[] msg) {
-        if (appKey == null || appIv == null) {
-            return new byte[0]; // todo
-        }
-        return Crypto.encryptUart(appKey, appIv, msg, it++);
-    }
-
-    public byte[] decryptUart(byte[] msg) {
-        if (devKey == null || devIv == null) {
-            return new byte[0]; // todo
-        }
-        return Crypto.decryptUart(devKey, devIv, msg);
     }
 }

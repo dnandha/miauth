@@ -160,4 +160,9 @@ public class AuthBase {
 
     public void exec() {
     }
+
+    public AuthCommand toCommand(byte[] command, Consumer<byte[]> onResponse, boolean waitTimeout) {
+        dispose();
+        return new AuthCommand(device, data, command, onResponse, waitTimeout);
+    }
 }

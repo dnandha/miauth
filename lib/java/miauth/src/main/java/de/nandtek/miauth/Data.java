@@ -16,6 +16,12 @@ package de.nandtek.miauth;
 
 public class Data {
     protected byte[] token = null;
+    private byte[] appKey = null;
+    private byte[] devKey = null;
+    private byte[] appIv = null;
+    private byte[] devIv = null;
+
+    private int it = 0;
 
     public Data() {
     }
@@ -30,5 +36,48 @@ public class Data {
 
     public void setToken(byte[] data) {
         token = data;
+    }
+
+    public void resetToken() {
+        this.token = null;
+    }
+
+    public void resetKeys() {
+        this.devKey = null;
+        this.appKey = null;
+        this.devIv = null;
+        this.appIv = null;
+    }
+
+    public void setKeys(byte[] devKey, byte[] appKey) {
+        this.devKey = devKey;
+        this.appKey = appKey;
+    }
+
+    public void setIvs(byte[] devIv, byte[] appIv) {
+        this.devIv = devIv;
+        this.appIv = appIv;
+    }
+
+    public boolean hasKeys() {
+        return appKey != null && devKey != null;
+    }
+
+    public boolean hasIvs() {
+        return appIv != null && devIv != null;
+    }
+
+    public byte[] encryptUart(byte[] msg) {
+        if (appKey == null || appIv == null) {
+            return new byte[0]; // todo
+        }
+        return Crypto.encryptUart(appKey, appIv, msg, it++);
+    }
+
+    public byte[] decryptUart(byte[] msg) {
+        if (devKey == null || devIv == null) {
+            return new byte[0]; // todo
+        }
+        return Crypto.decryptUart(devKey, devIv, msg);
     }
 }
