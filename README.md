@@ -9,7 +9,7 @@ In order to understand the authentication process I captured BLE communication d
 ## Python and Java libraries
 For optimal platform support I provide both a [Python package](lib/python/) and a [Java library](lib/java/) for Mi authentication. You can find instructions on how to install and use these libraries in the respective folders.
 
-If you want to use the Python library simply install it `pip install miauth`. This also gives you access to the `miauth` command.
+If you want to use the Python library simply install it with `pip install miauth` - this also gives you access to the `miauth` command.
 
 ## Special thanks
 This work would not have been possible without the following projects:
