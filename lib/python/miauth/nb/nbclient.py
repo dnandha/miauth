@@ -1,6 +1,6 @@
 #
 #     MiAuth - Authenticate and interact with Xiaomi devices over BLE
-#     Copyright (C) 2021  Daljeet Nandha
+#     Copyright (C) 2022  Daljeet Nandha
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU Affero General Public License as
@@ -21,13 +21,12 @@ from collections import deque
 from enum import Enum
 import secrets
 
-from bluepy import btle
-
 from miauth.nb.nbcommand import NbCommand
-from miauth.uuid import UUID
+from miauth.ble.uuid import UUID
+from miauth.ble.base import BLEBase
 
 
-class NbClient(btle.DefaultDelegate):
+class NbClient(object):
     class State(Enum):
         DISC = 0
         CON = 1
@@ -38,15 +37,12 @@ class NbClient(btle.DefaultDelegate):
 
     APP_KEY = secrets.token_bytes(16)
 
-    def __init__(self, p, mac, crypto, debug=False):
-        self.p = p
-        self.mac = mac
+    def __init__(self, ble: BLEBase, crypto, debug=False):
+        self.ble = ble
         self.crypto = crypto
         self.debug = debug
 
-        btle.DefaultDelegate.__init__(self)
-
-        self.ch_tx, self.ch_rx = None, None
+        self.ble.set_handler(self.main_handler)
 
         self.received_serial = b''
         self.received_key = b''
@@ -55,7 +51,7 @@ class NbClient(btle.DefaultDelegate):
 
         self.state = NbClient.State.DISC
 
-    def handleNotification(self, c_handle, data):
+    def main_handler(self, data):
         if data[:2] == b"\x5a\xa5":
             self.receive_buffer = data
         else:
@@ -72,22 +68,11 @@ class NbClient(btle.DefaultDelegate):
             self.receive_handler(cmd, payload)
 
     def connect(self):
-        self.p.connect(self.mac, btle.ADDR_TYPE_RANDOM)
-        self.p.setDelegate(self)
-
-        svc = self.p.getServiceByUUID(UUID.UART)
-        self.ch_tx = svc.getCharacteristics(UUID.TX)[0]
-        self.ch_rx = svc.getCharacteristics(UUID.RX)[0]
-
-        resp = self.p.writeCharacteristic(self.ch_rx.valHandle + 1, b'\x01\x00', True)
-        if resp['rsp'][0] != 'wr':
-            raise Exception("BLE could not setup notifications")
-
+        self.ble.connect()
         self.state = NbClient.State.CON
 
     def disconnect(self):
-        self.p.disconnect()
-
+        self.ble.disconnect()
         self.state = NbClient.State.DISC
 
     def receive_handler(self, cmd, payload):
@@ -163,28 +148,15 @@ class NbClient(btle.DefaultDelegate):
             while msg_len > 0:
                 tmp_len = msg_len if msg_len <= 20 else 20
                 buf = msg[byte_idx:byte_idx + tmp_len]
-                self.ch_tx.write(buf, False)
+                self.ble.write(UUID.TX, buf)
 
                 msg_len -= tmp_len
                 byte_idx += tmp_len
 
             time.sleep(1.0)
 
-    def read_device_name(self):
-        ch = self.p.getCharacteristics(uuid=btle.AssignedNumbers.deviceName)
-
-        if not ch:
-            raise Exception("Device name not found.")
-
-        name = ch[0].read()
-
-        if self.debug:
-            print("Got device name:", name.decode())
-
-        return name
-
     def auth(self):
-        self.crypto.set_name(self.read_device_name())
+        self.crypto.set_name(self.ble.read_device_name())
 
         threading.Thread(target=self.process_thread).start()
         threading.Thread(target=self.send_thread).start()

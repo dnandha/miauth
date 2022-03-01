@@ -1,6 +1,6 @@
 #
 #     MiAuth - Authenticate and interact with Xiaomi devices over BLE
-#     Copyright (C) 2021  Daljeet Nandha
+#     Copyright (C) 2022  Daljeet Nandha
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU Affero General Public License as
@@ -19,11 +19,11 @@ import sys
 import os
 import argparse
 
-from bluepy import btle
-
 from miauth.mi.miclient import MiClient
 from miauth.nb.nbclient import NbClient
 from miauth.nb.nbcrypto import NbCrypto
+
+from miauth.ble.blue import BluePy
 
 parser = argparse.ArgumentParser()
 parser.add_argument("mac", help="mac address of target device")
@@ -41,8 +41,8 @@ parser.add_argument("-t", "--token_file", default="./mi_token",
 args = parser.parse_args()
 
 
-def nb_main():
-    nc = NbClient(btle.Peripheral(), args.mac, NbCrypto(), debug=args.debug)
+def nb_main(ble):
+    nc = NbClient(ble, NbCrypto(), debug=args.debug)
 
     print("Connecting")
     nc.connect()
@@ -67,10 +67,10 @@ def nb_main():
     nc.disconnect()
 
 
-def mi_main():
-    mc = MiClient(btle.Peripheral(), args.mac, debug=args.debug)
+def mi_main(ble):
+    mc = MiClient(ble, debug=args.debug)
     print("Connecting")
-    mc.connect()
+    ble.connect()
 
     if args.register:
         print("Registering")
@@ -107,14 +107,17 @@ Caution: After registration this device will lose coupling to all other apps (re
         print("Firmware version:", f"{resp[0]}.{resp[1]}")
 
     print("Disconnecting")
-    mc.disconnect()
+    ble.disconnect()
 
 
 def main():
+    # default BLE lib is bluepy
+    ble = BluePy(args.mac)
+
     if args.nb == "nb":
-        nb_main()
+        nb_main(ble)
     else:
-        mi_main()
+        mi_main(ble)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 #
 #     MiAuth - Authenticate and interact with Xiaomi devices over BLE
-#     Copyright (C) 2021  Daljeet Nandha
+#     Copyright (C) 2022  Daljeet Nandha
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU Affero General Public License as
@@ -17,14 +17,13 @@
 #
 import time
 
-from bluepy import btle
-
 from miauth.mi.micommand import MiCommand
 from miauth.mi.micrypto import MiCrypto
-from miauth.uuid import UUID
+from miauth.ble.base import BLEBase
+from miauth.ble.uuid import UUID
 
 
-class MiClient(btle.DefaultDelegate):
+class MiClient(object):
     class State(object):
         INIT = -1
         RECV_INFO = 0
@@ -34,15 +33,11 @@ class MiClient(btle.DefaultDelegate):
         CONFIRM = 4
         COMM = 5
 
-    def __init__(self, p, mac, debug=False):
-        self.p = p
-        self.mac = mac
+    def __init__(self, ble: BLEBase, debug=False):
+        self.ble = ble
         self.debug = debug
 
-        btle.DefaultDelegate.__init__(self)
-
-        self.ch_avdtp, self.ch_upnp = None, None
-        self.ch_tx, self.ch_rx = None, None
+        self.ble.set_handler(self.main_handler)
 
         # TODO: implement power button press recognition self.button = False
         # self.s = btle.Scanner().withDelegate(self)
@@ -69,66 +64,18 @@ class MiClient(btle.DefaultDelegate):
         # counter for sent uart commands
         self.uart_it = 0
 
-    def handleNotification(self, handle, data):
-        if not data:
-            return
-
-        self.main_handler(data)
-
-    def enable_notify(self, ch, reset=False):
-        val = b'\x01\x00' if not reset else b'\x00\x00'
-        resp = self.p.writeCharacteristic(ch.valHandle + 1, val, True)
-        if resp['rsp'][0] != 'wr':
-            raise Exception("BLE could not setup notifications.")
-
-    def bt_write(self, char, data, resp=False):
-        if self.debug:
-            print("->", data.hex())
-
-        char.write(data, resp)
-
-    # no header bytes
-    # TODO: merge write functions
-    def bt_write_chunked(self, char, data, resp=False, chunk_size=20):
-        for i in range(0, len(data), chunk_size):
-            chunk = data[i:i + chunk_size]
-            self.bt_write(char, chunk, resp=resp)
-
-    def bt_write_parcel(self, char, data, resp=False, chunk_size=18):
-        for i in range(0, len(data), chunk_size):
-            chunk = data[i:i + chunk_size]
-            chunk = bytes([i // chunk_size + 1, 0]) + chunk
-            self.bt_write(char, chunk, resp=resp)
-
-    def connect(self):
-        self.p.connect(self.mac, btle.ADDR_TYPE_RANDOM)
-        self.p.setDelegate(self)
-
-        svc = self.p.getServiceByUUID(UUID.AUTH)
-        self.ch_avdtp = svc.getCharacteristics(UUID.AVDTP)[0]
-        self.ch_upnp = svc.getCharacteristics(UUID.UPNP)[0]
-
-        svc = self.p.getServiceByUUID(UUID.UART)
-        self.ch_tx = svc.getCharacteristics(UUID.TX)[0]
-        self.ch_rx = svc.getCharacteristics(UUID.RX)[0]
-
-        self.enable_notify(self.ch_avdtp)
-        self.enable_notify(self.ch_upnp)
-        self.enable_notify(self.ch_rx)
-
-    def disconnect(self):
-        self.p.disconnect()
-
     def reset(self):
-        self.enable_notify(self.ch_rx, reset=True)
-        self.p.disconnect()
-        self.__init__(self.p, self.mac, debug=self.debug)
+        self.ble.disconnect()
+        self.__init__(self.ble, debug=self.debug)
 
     def get_state(self):
         return self.seq[self.seq_idx][0]
 
     def next_state(self):
         self.seq_idx += 1
+
+        if self.debug:
+            print("new state:", self.get_state())
 
         # exec entry func
         f = self.seq[self.seq_idx][1]
@@ -162,14 +109,14 @@ class MiClient(btle.DefaultDelegate):
                 print("Expecting", self.receive_frames, "frames")
 
             self.received_data = b''
-            self.bt_write(self.ch_avdtp, MiCommand.RCV_RDY)
+            self.ble.write(UUID.AVDTP, MiCommand.RCV_RDY)
         else:
             self.received_data += data[2:]
 
         if frm == self.receive_frames:
             if self.debug:
                 print("All frames received: ", self.received_data.hex())
-            self.bt_write(self.ch_avdtp, MiCommand.RCV_OK)
+            self.ble.write(UUID.AVDTP, MiCommand.RCV_OK)
             self.next_state()
 
     def send_handler(self, frm, data):
@@ -179,7 +126,7 @@ class MiClient(btle.DefaultDelegate):
         if data == MiCommand.RCV_RDY:
             if self.debug:
                 print("Mi ready to receive key")
-            self.bt_write_parcel(self.ch_avdtp, self.send_data)
+            self.ble.write_parcel(UUID.AVDTP, self.send_data)
         if data == MiCommand.RCV_TOUT:
             raise Exception("Mi sent RCV timeout.")
         if data == MiCommand.RCV_ERR:
@@ -252,23 +199,23 @@ class MiClient(btle.DefaultDelegate):
             print("Public Key (Hex):", MiCrypto.pub_key_to_bytes(pub_key).hex())
 
         def on_recv_info_state():
-            self.bt_write(self.ch_upnp, MiCommand.CMD_GET_INFO)
+            self.ble.write(UUID.UPNP, MiCommand.CMD_GET_INFO)
 
         def on_send_key_state():
             self.remote_info = self.received_data
 
             self.send_data = MiCrypto.pub_key_to_bytes(pub_key)
-            self.bt_write(self.ch_upnp, MiCommand.CMD_SET_KEY)
-            self.bt_write(self.ch_avdtp, MiCommand.CMD_SEND_DATA)
+            self.ble.write(UUID.UPNP, MiCommand.CMD_SET_KEY)
+            self.ble.write(UUID.AVDTP, MiCommand.CMD_SEND_DATA)
 
         def on_send_did_state():
             self.remote_key = self.received_data
 
             self.send_data, self.token = self.calc_did(priv_key)
-            self.bt_write(self.ch_avdtp, MiCommand.CMD_SEND_DID)
+            self.ble.write(UUID.AVDTP, MiCommand.CMD_SEND_DID)
 
         def on_confirm_state():
-            self.bt_write(self.ch_upnp, MiCommand.CMD_AUTH)
+            self.ble.write(UUID.UPNP, MiCommand.CMD_AUTH)
 
         self.seq = ((MiClient.State.INIT, None),
                     (MiClient.State.RECV_INFO, on_recv_info_state()),
@@ -282,19 +229,21 @@ class MiClient(btle.DefaultDelegate):
 
         self.next_state()
         while self.get_state() != MiClient.State.COMM:
-            if self.p.waitForNotifications(3.0):
-                continue
+            self.ble.wait_notify(secs=3.0)
 
-            # Trick 17: if no response ...
-            # disconnect here and wait for power button press
-            # after button press, reconnect and restart from beginning
-            self.reset()
+            if self.get_state() != MiClient.State.COMM:
+                # Trick 17: if no response ...
+                # disconnect here and wait for power button press
+                # after button press, reconnect and restart from beginning
+                self.reset()
 
-            print(">> Please press power button within 5 secs after beep")
-            time.sleep(5)
-            self.connect()
+                print(">> Please press power button within 5 secs after beep")
+                time.sleep(5)
+                self.ble.connect()
 
-            return self.register()  # return because of recursion
+                return self.register()  # return because of recursion
+            else:
+                break
 
     def save_token(self, filename):
         with open(filename, 'wb') as f:
@@ -309,8 +258,8 @@ class MiClient(btle.DefaultDelegate):
 
         def on_send_key_state():
             self.send_data = rand_key
-            self.bt_write(self.ch_upnp, MiCommand.CMD_LOGIN)
-            self.bt_write(self.ch_avdtp, MiCommand.CMD_SEND_KEY)
+            self.ble.write(UUID.UPNP, MiCommand.CMD_LOGIN)
+            self.ble.write(UUID.AVDTP, MiCommand.CMD_SEND_KEY)
 
         def on_recv_info_state():
             self.remote_key = self.received_data
@@ -321,7 +270,7 @@ class MiClient(btle.DefaultDelegate):
             self.send_data, expected_remote_info, self.keys = self.calc_login_info(rand_key)
             assert self.remote_info == expected_remote_info, \
                 f"{self.remote_info.hex()} != {expected_remote_info.hex()}"
-            self.bt_write(self.ch_avdtp, MiCommand.CMD_SEND_INFO)
+            self.ble.write(UUID.AVDTP, MiCommand.CMD_SEND_INFO)
 
         self.seq = (
             (MiClient.State.INIT, None),
@@ -336,8 +285,7 @@ class MiClient(btle.DefaultDelegate):
 
         self.next_state()
         while self.get_state() != MiClient.State.COMM:
-            if self.p.waitForNotifications(3.0):
-                continue
+            self.ble.wait_notify(secs=3.0)
 
     def comm(self, cmd):
         if self.get_state() != MiClient.State.COMM:
@@ -355,10 +303,9 @@ class MiClient(btle.DefaultDelegate):
 
         self.received_data = b''
         if not self.keys:
-            self.bt_write_chunked(self.ch_tx, cmd)
+            self.ble.write_chunked(UUID.TX, cmd)
 
-            while self.p.waitForNotifications(1.0):
-                continue
+            self.ble.wait_notify()
 
             if not self.received_data:
                 raise Exception("No answer received. Try login first.")
@@ -369,11 +316,10 @@ class MiClient(btle.DefaultDelegate):
                                     self.keys['app_iv'],
                                     cmd,
                                     it=self.uart_it)
-        self.bt_write_chunked(self.ch_tx, res)
+        self.ble.write_chunked(UUID.TX, res)
         self.uart_it += 1
 
-        while self.p.waitForNotifications(1.0):
-            continue
+        self.ble.wait_notify()
 
         if not self.received_data:
             #raise Exception("No answer received. Firmware not supported.")

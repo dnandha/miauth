@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='miauth',
-    version='0.9.2',
+    version='0.9.3',
     url='https://github.com/dnandha/miauth',
     license='GNU AGPL v3',
     author='Daljeet Nandha',
@@ -13,8 +13,12 @@ setup(
         'console_scripts': ['miauth=miauth.cli:main']
     },
     install_requires=[
-        'cryptography==36.0.0',
-        'bluepy==1.3.0'
+        'cryptography'
     ],
+    extras_require={
+        'cli': [
+            'bluepy==1.3.0'
+        ]
+    },
     python_requires=">=3.6",
 )
