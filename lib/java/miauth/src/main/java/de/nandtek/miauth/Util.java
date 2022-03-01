@@ -63,6 +63,20 @@ public class Util {
         return result;
     }
 
+    public static int signedToUnsignedInt(short val) {
+        short result = val;
+        // ss the negative-bit set?
+        if ((val & 0x8FFF) > 0) {
+            // flip
+            result = (short) ~result;
+            // +1
+            result += 1;
+
+            result = (short) -result;
+        }
+        return result;
+    }
+
     public static byte[] intToBytes(int i, int size) {
         //byte[] result = new byte[size];
         //ByteBuffer bb = ByteBuffer.allocate(size);

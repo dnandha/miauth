@@ -149,6 +149,14 @@ public class AuthBase {
         compositeDisposable.dispose();
     }
 
+    public boolean isDisposed() {
+        return compositeDisposable.isDisposed();
+    }
+
+    public void onComplete(Consumer<Boolean> complete) {
+        Disposable subscribe = stopNotifyTrigger.subscribe(complete);
+    }
+
     public void reset() {
         compositeDisposable.dispose();
         device.disconnect();
@@ -161,8 +169,8 @@ public class AuthBase {
     public void exec() {
     }
 
-    public AuthCommand toCommand(byte[] command, Consumer<byte[]> onResponse, boolean waitTimeout) {
+    public AuthCommand toCommand(byte[] command, Consumer<byte[]> onResponse) {
         dispose();
-        return new AuthCommand(device, data, command, onResponse, waitTimeout);
+        return new AuthCommand(device, data, command, onResponse);
     }
 }

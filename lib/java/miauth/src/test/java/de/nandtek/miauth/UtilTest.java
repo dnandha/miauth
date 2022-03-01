@@ -51,4 +51,12 @@ public class UtilTest extends TestCase {
         byte[] crc = Util.crc16(new byte[]{(byte)0xa1,0x21,(byte)0xf3,4,5,6,7,8,9});
         Assert.assertEquals("23fe", Util.bytesToHex(crc));
     }
+
+    public void testUnsignedToSignedInt() {
+        int val = 33023;
+        Assert.assertEquals(-32513, Util.signedToUnsignedInt((short) val));
+        // not
+        val = 32512;
+        Assert.assertEquals(val, Util.signedToUnsignedInt((short) val));
+    }
 }

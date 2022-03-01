@@ -27,11 +27,12 @@ public class AuthCommand extends AuthBase {
     private final Consumer<byte[]> onResponse;
     private final boolean waitTimeout;
 
-    public AuthCommand(IDevice device, IData data, byte[] command, Consumer<byte[]> onResponse, boolean waitTimeout) {
+    public AuthCommand(IDevice device, IData data, byte[] command, Consumer<byte[]> onResponse) {
         super(device, data);
         this.command = command;
         this.onResponse = onResponse;
-        this.waitTimeout = waitTimeout;
+        //this.waitTimeout = waitTimeout;
+        this.waitTimeout = false;
     }
 
     @Override
@@ -62,7 +63,7 @@ public class AuthCommand extends AuthBase {
             final Disposable rxSub = device.onNotify(MiUUID.RX)
                     //.doOnError(throwable -> handleMessage(null))  // TODO: for what was this?
                     .takeUntil(stopNotifyTrigger)
-                    .timeout(2, TimeUnit.SECONDS, Observable.create(emitter -> {
+                    .timeout(500, TimeUnit.MILLISECONDS, Observable.create(emitter -> {
                         //stopNotifyTrigger.onNext(true);
                         if (waitTimeout) {
                             System.out.println("command: subscription timeout");
