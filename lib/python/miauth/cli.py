@@ -114,9 +114,11 @@ def main():
     # default BLE lib is bluepy
     ble = BluePy(args.mac)
 
-    if args.nb == "nb":
+    if args.nb:
+        print("Using Nb")
         nb_main(ble)
     else:
+        print("Using Mi")
         mi_main(ble)
 
 

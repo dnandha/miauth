@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='miauth',
-    version='0.9.3',
+    version='0.9.4',
     url='https://github.com/dnandha/miauth',
     license='GNU AGPL v3',
     author='Daljeet Nandha',
