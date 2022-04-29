@@ -41,7 +41,8 @@ public class DataRegister implements IData {
         byte[] derived = Crypto.deriveSecret(
                 Crypto.generateSecret(myKeys.getPrivate(), remoteKey),
                 null);
-        parent.token = Arrays.copyOfRange(derived, 0, 12);
+        parent.setToken(Arrays.copyOfRange(derived, 0, 12));
+        parent.setBltId(remoteInfo);
         byte[] bindKey = Arrays.copyOfRange(derived, 12, 28);
         byte[] didKey = Arrays.copyOfRange(derived, 28, 44);
         byte[] junk = Arrays.copyOfRange(derived, 44, 64);
@@ -68,6 +69,15 @@ public class DataRegister implements IData {
     @Override
     public void setRemoteInfo(byte[] data) {
         remoteInfo = Arrays.copyOfRange(data, 4, data.length);
+        if (remoteInfo.length < 20) {
+            remoteInfo = parent.getBltId();
+            if (remoteInfo == null) {
+                remoteInfo = new byte[20];
+
+                String bltid = "blt.4.1" + Util.randomAscii(10) + "00";
+                System.arraycopy(bltid.getBytes(), 0, remoteInfo, 1, 19);
+            }
+        }
     }
 
     @Override

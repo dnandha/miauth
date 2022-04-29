@@ -14,6 +14,8 @@
 //
 package de.nandtek.miauth;
 
+import android.os.Debug;
+
 import junit.framework.TestCase;
 
 import org.junit.Assert;
@@ -42,9 +44,19 @@ public class UtilTest extends TestCase {
         Assert.assertArrayEquals(new byte[]{0x39,5,0,0}, b);
     }
 
+    public void testByteToInt() {
+        int i = Util.bytesToInt(new byte[]{0x39});
+        Assert.assertEquals(57, i);
+    }
+
     public void testBytesToInt() {
         int i = Util.bytesToInt(new byte[]{0x39,5,0,0});
         Assert.assertEquals(1337, i);
+    }
+
+    public void testBytesTo32Int() {
+        int i = Util.bytesToInt(new byte[]{0x39,5,1,0});
+        Assert.assertEquals(66873, i);
     }
 
     public void testCrc16() {
@@ -58,5 +70,10 @@ public class UtilTest extends TestCase {
         // not
         val = 32512;
         Assert.assertEquals(val, Util.signedToUnsignedInt((short) val));
+    }
+
+    public void testRandomAscii() {
+        String str = Util.randomAscii(8);
+        Assert.assertEquals(8, str.length());
     }
 }

@@ -14,6 +14,11 @@
 //
 package de.nandtek.miauth;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.Arrays;
+import java.util.UUID;
+
 public class Util {
     public static byte[] combineBytes(byte[] b1, byte[] b2) {
         byte[] result = new byte[b1.length+b2.length];
@@ -46,21 +51,21 @@ public class Util {
     }
 
     public static int bytesToInt(byte[] bytes) {
-        //ByteBuffer bb = ByteBuffer.wrap(bytes);
-        //bb.order(ByteOrder.LITTLE_ENDIAN);
-        //if (bytes.length == 1) {
-        //    return bb.getChar();
-        //} else if (bytes.length == 2) {
-        //    return bb.getShort();
-        //} else if (bytes.length == 4) {
-        //    return bb.getInt();
-        //}
-        //return 0;
-        int result = bytes[0] & 0xff;
-        for (int i = 1; i < bytes.length; i++) {
-            result |= (bytes[i] & 0xff) << 8;
+        ByteBuffer bb = ByteBuffer.wrap(bytes);
+        bb.order(ByteOrder.LITTLE_ENDIAN);
+        if (bytes.length == 1) {
+            return bb.get();
+        } else if (bytes.length == 2) {
+            return bb.getShort();
+        } else if (bytes.length == 4) {
+            return bb.getInt();
         }
-        return result;
+        return 0;
+        //int result = bytes[0] & 0xff;
+        //for (int i = 1; i < bytes.length; i++) {
+        //    result |= (bytes[i] & 0xff) << 8;
+        //}
+        //return result;
     }
 
     public static int signedToUnsignedInt(short val) {
@@ -103,5 +108,10 @@ public class Util {
         sum = ~sum;
 
         return intToBytes(sum, 2);
+    }
+
+    public static String randomAscii(int size) {
+        UUID randomUUID = UUID.randomUUID();
+        return randomUUID.toString().replaceAll("_", "").replaceAll("-","").substring(0, size);
     }
 }

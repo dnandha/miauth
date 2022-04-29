@@ -17,6 +17,7 @@ package de.nandtek.miauth;
 public class CommandBase {
     static final byte[] ReceiveReady = new byte[]{0, 0, 1, 1};
     static final byte[] Received = new byte[]{0, 0, 1, 0};
+    static final byte[] Error = new byte[]{(byte) 0xe0, 0, 0, 0};
     /* RCV_TOUT = b"\x00\x00\x01\x05\x01\x00"
     RCV_ERR = b"\x00\x00\x01\x05\x03\x00"*/
 }

@@ -28,5 +28,7 @@ public interface IDevice {
     void read(UUID uuid, Consumer<byte[]> onReadSuccess);
     Observable<byte[]> onNotify(UUID uuid);
 
+    boolean isDisconnected();
+
     void onDisconnect(Consumer<Boolean> onDisconnect);
 }

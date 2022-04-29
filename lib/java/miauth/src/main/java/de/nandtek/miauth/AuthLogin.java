@@ -29,6 +29,17 @@ public class AuthLogin extends AuthBase {
     @Override
     protected void handleMessage(byte[] message) {
         System.out.println("login: handling message");
+
+        if (Arrays.equals(message, CommandLogin.Error)) {
+            updateProgress("login: failed, missing id (9/9)");
+            stopNotifyTrigger.onNext(true);
+            try {
+                onComplete.accept(false);
+            } catch (Exception e) {
+                System.err.println(e.getMessage());
+            }
+        }
+
         if (!data.hasRemoteKey()) {
             updateProgress("login: handling remote key (3/9)");
             if (Arrays.equals(message, CommandLogin.ReceiveReady)) {

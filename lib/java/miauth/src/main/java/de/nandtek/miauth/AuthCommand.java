@@ -63,7 +63,7 @@ public class AuthCommand extends AuthBase {
             final Disposable rxSub = device.onNotify(MiUUID.RX)
                     //.doOnError(throwable -> handleMessage(null))  // TODO: for what was this?
                     .takeUntil(stopNotifyTrigger)
-                    .timeout(500, TimeUnit.MILLISECONDS, Observable.create(emitter -> {
+                    .timeout(400, TimeUnit.MILLISECONDS, Observable.create(emitter -> {
                         //stopNotifyTrigger.onNext(true);
                         if (waitTimeout) {
                             System.out.println("command: subscription timeout");

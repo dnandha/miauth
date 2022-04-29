@@ -16,6 +16,7 @@ package de.nandtek.miauth;
 
 public class Data {
     protected byte[] token = null;
+    protected byte[] bltid = null;
     private byte[] appKey = null;
     private byte[] devKey = null;
     private byte[] appIv = null;
@@ -36,6 +37,18 @@ public class Data {
 
     public void setToken(byte[] data) {
         token = data;
+    }
+
+    public byte[] getBltId() {
+        return bltid;
+    }
+
+    public void setBltId(byte[] bltid) {
+        this.bltid = bltid;
+    }
+
+    public boolean hasBltId() {
+        return bltid != null;
     }
 
     public void resetToken() {
