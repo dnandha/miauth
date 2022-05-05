@@ -229,7 +229,7 @@ public class Crypto {
         data[2] = itBytes[1];
         System.arraycopy(ct, 0, data, 3, ct.length);
 
-        byte[] crc = Util.crc16(data);
+        byte[] crc = Util.crc(data, 2);
 
         byte[] result = new byte[header.length+data.length+crc.length];
 
@@ -255,16 +255,4 @@ public class Crypto {
         return decrypt(key, ct, nonce, null);
     }
 
-    public static int calcAuth(byte[] oldSn, byte[] newSn, int salt) {
-        int s = 0;
-        for (int i = 0; i < 0x0e; ++i) {
-            s += oldSn[i];
-            s *= newSn[i];
-        }
-        s += salt;
-        s = s < 0 ? -s : s;
-        s %= 1000000;
-
-        return s;
-    }
 }

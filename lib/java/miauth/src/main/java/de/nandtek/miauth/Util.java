@@ -16,6 +16,8 @@ package de.nandtek.miauth;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -48,6 +50,10 @@ public class Util {
         }
 
         return hex.toString().toLowerCase();
+    }
+
+    public static String intToHex(int val) {
+        return String.format("%02X", val);
     }
 
     public static int bytesToInt(byte[] bytes) {
@@ -102,12 +108,31 @@ public class Util {
         return result;
     }
 
-    public static byte[] crc16(byte[] data) {
+    public static byte[] crc(byte[] data, int size) {
         int sum = 0;
         for (byte datum : data) sum += (datum & 0xff);
         sum = ~sum;
 
-        return intToBytes(sum, 2);
+        return intToBytes(sum, size);
+    }
+
+    public static String md5(byte[] data) {
+        MessageDigest md5 = null;
+        try {
+            md5 = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        if (md5 != null) {
+            md5.update(data);
+            byte[] digest = md5.digest();
+            StringBuilder result = new StringBuilder();
+            for (int i = 0; i < digest.length; i++) {
+                result.append(Integer.toString((digest[i] & 0xff) + 0x100, 16).substring(1));
+            }
+            return result.toString();
+        }
+        return "";
     }
 
     public static String randomAscii(int size) {

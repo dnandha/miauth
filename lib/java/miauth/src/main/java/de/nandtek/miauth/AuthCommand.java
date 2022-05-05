@@ -44,7 +44,9 @@ public class AuthCommand extends AuthBase {
 
             byte[] dec = data.getParent().decryptUart(message);
             updateProgress("command: (2/2) decoded response:" + Util.bytesToHex(dec));
-            response = Arrays.copyOfRange(dec, 3, dec.length - 4);
+            if (dec[2] == command[5]) {
+                response = Arrays.copyOfRange(dec, 3, dec.length - 4);
+            }
         }
 
         try {
@@ -106,11 +108,11 @@ public class AuthCommand extends AuthBase {
         if ((data[0] & 0xff) == 0x55 && (data[1] & 0xff) != 0xaa && data.length > 2) {
             receiveBuffer = ByteBuffer.allocate(0x10 + data[2]);
             receiveBuffer.put(data);
-        } else {
+        } else if (receiveBuffer != null) {
             receiveBuffer.put(data);
         }
 
-        if (!waitTimeout && !receiveBuffer.hasRemaining()) {
+        if (!waitTimeout && receiveBuffer != null && !receiveBuffer.hasRemaining()) {
             preHandleMessage();
         }
     }

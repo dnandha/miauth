@@ -60,8 +60,17 @@ public class UtilTest extends TestCase {
     }
 
     public void testCrc16() {
-        byte[] crc = Util.crc16(new byte[]{(byte)0xa1,0x21,(byte)0xf3,4,5,6,7,8,9});
+        byte[] crc = Util.crc(new byte[]{(byte)0xa1,0x21,(byte)0xf3,4,5,6,7,8,9}, 2);
         Assert.assertEquals("23fe", Util.bytesToHex(crc));
+    }
+
+    public void testCrc32() {
+        byte[] b = new byte[]{
+                (byte)0xa1,0x21,(byte)0xf3,4,5,6,7,8,9,
+                (byte)0xa1,0x21,(byte)0xf3,4,5,6,7,8,9
+        };
+        byte[] crc = Util.crc(b, 4);
+        Assert.assertEquals("23fe23fe", Util.bytesToHex(crc));
     }
 
     public void testUnsignedToSignedInt() {
@@ -75,5 +84,9 @@ public class UtilTest extends TestCase {
     public void testRandomAscii() {
         String str = Util.randomAscii(8);
         Assert.assertEquals(8, str.length());
+    }
+
+    public void testIntToHex() {
+        Assert.assertEquals("D5", Util.intToHex(213));
     }
 }
