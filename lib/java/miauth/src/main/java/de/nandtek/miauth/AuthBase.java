@@ -160,7 +160,9 @@ public class AuthBase {
     public void reset() {
         compositeDisposable.dispose();
         device.disconnect();
-        data.clear();
+        if (data != null) {
+            data.clear();
+        }
     }
 
     protected void handleMessage(byte[] message) {
@@ -169,8 +171,8 @@ public class AuthBase {
     public void exec() {
     }
 
-    public AuthCommand toCommand(byte[] command, Consumer<byte[]> onResponse) {
+    public AuthCommand toCommand() {
         dispose();
-        return new AuthCommand(device, data, command, onResponse);
+        return new AuthCommand(device, data);
     }
 }
