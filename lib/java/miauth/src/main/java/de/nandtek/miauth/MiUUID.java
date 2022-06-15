@@ -25,4 +25,5 @@ public class MiUUID {
     public static final UUID RX = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e");
     public static final UUID UPNP = UUID.fromString("00000010-0000-1000-8000-00805f9b34fb");
     public static final UUID AVDTP = UUID.fromString("00000019-0000-1000-8000-00805f9b34fb");
+    public static final UUID PRO = UUID.fromString("00000014-0000-1000-8000-00805f9b34fb");
 }

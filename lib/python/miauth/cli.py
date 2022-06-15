@@ -21,12 +21,13 @@ import argparse
 
 from bluepy import btle
 
-from miauth.mi.miclient import MiClient
+from miauth.mi.miclient import MiClient, MClient
 from miauth.nb.nbclient import NbClient
 from miauth.nb.nbcrypto import NbCrypto
 
 parser = argparse.ArgumentParser()
 parser.add_argument("mac", help="mac address of target device")
+parser.add_argument("-m", "--m365", action='store_true', help="use m365 protocol instead (no auth)")
 parser.add_argument("-n", "--nb", action='store_true', help="use Nb protocol instead")
 parser.add_argument("-c", "--command", help="send command (w/o checksum) to uart and print reply")
 parser.add_argument("-s", "--serial", action='store_true', help="retrieve serial number")
@@ -39,6 +40,7 @@ parser.add_argument("-t", "--token_file", default="./mi_token",
                     help="path to mi token file (default: ./mi_token)")
 
 args = parser.parse_args()
+print(args)
 
 
 def nb_main():
@@ -66,6 +68,29 @@ def nb_main():
     print("Disconnecting")
     nc.disconnect()
 
+
+def m365_main():
+    m = MClient(btle.Peripheral(), args.mac, debug=args.debug)
+
+    print("Connecting")
+    m.connect()
+
+    if args.command:
+        resp = m.comm(args.command)
+        print("UART reply:", resp.hex())
+
+    # NOTE: don't send checksums!
+    if args.serial:
+        print("Retrieving serial number")
+        resp = m.comm("55aa032001100e")
+        print("Serial no.:", resp.decode())
+    if args.version:
+        print("Retrieving firmware version")
+        resp = m.comm("55aa0320011a10")
+        print("Firmware version:", f"{resp[0]}.{resp[1]}")
+
+    print("Disconnecting")
+    m.disconnect()
 
 def mi_main():
     mc = MiClient(btle.Peripheral(), args.mac, debug=args.debug)
@@ -111,8 +136,10 @@ Caution: After registration this device will lose coupling to all other apps (re
 
 
 def main():
-    if args.nb == "nb":
+    if args.nb:
         nb_main()
+    elif args.m365:
+        m365_main()
     else:
         mi_main()
 
