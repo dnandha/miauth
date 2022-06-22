@@ -21,13 +21,14 @@ import argparse
 
 from bluepy import btle
 
-from miauth.mi.miclient import MiClient, MClient
+from miauth.mi.miclient import MiClient
+from miauth.mi.m365client import M365Client
 from miauth.nb.nbclient import NbClient
 from miauth.nb.nbcrypto import NbCrypto
 
 parser = argparse.ArgumentParser()
 parser.add_argument("mac", help="mac address of target device")
-parser.add_argument("-m", "--m365", action='store_true', help="use m365 protocol instead (no auth)")
+parser.add_argument("-m", "--m365", action='store_true', help="use M365 protocol instead")
 parser.add_argument("-n", "--nb", action='store_true', help="use Nb protocol instead")
 parser.add_argument("-c", "--command", help="send command (w/o checksum) to uart and print reply")
 parser.add_argument("-s", "--serial", action='store_true', help="retrieve serial number")
@@ -70,7 +71,7 @@ def nb_main():
 
 
 def m365_main():
-    m = MClient(btle.Peripheral(), args.mac, debug=args.debug)
+    m = M365Client(btle.Peripheral(), args.mac, debug=args.debug)
 
     print("Connecting")
     m.connect()
