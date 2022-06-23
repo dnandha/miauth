@@ -14,18 +14,18 @@ If you want to use the Python library simply install it with `pip install miauth
 ## Special thanks
 This work would not have been possible without the following projects:
 
-(Nb legacy protocol: 5aa5)
-* @nopbxlr @majsi https://github.com/scooterhacking/NinebotCrypto
-
-(M365 protocol: 55aa)
-* @CamiAlfa https://github.com/CamiAlfa/M365-BLE-PROTOCOL
-
-(M365 protocol: 55ab)
-* @Informatic: https://github.com/Informatic/py9b
-
-(Mi EC protocol: 55ab)
+(Mi EC - 55ab)
 * @atc1441 https://github.com/atc1441/ATC_MiThermometer
 * @danielkucera https://github.com/danielkucera/mi-standardauth
+
+(M365 - 55ab)
+* @Informatic: https://github.com/Informatic/py9b
+
+(M365 - 55aa)
+* @CamiAlfa https://github.com/CamiAlfa/M365-BLE-PROTOCOL
+
+(Nb - 5aa5)
+* @nopbxlr @majsi https://github.com/scooterhacking/NinebotCrypto
 
 ## License
 This branch comes without the Nb protocol/crypto library, which is AGPL licensed.
