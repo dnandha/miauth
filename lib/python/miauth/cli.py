@@ -20,6 +20,7 @@ import os
 import argparse
 
 from miauth.mi.miclient import MiClient
+from miauth.mi.m365client import M365Client
 from miauth.nb.nbclient import NbClient
 from miauth.nb.nbcrypto import NbCrypto
 
@@ -27,6 +28,7 @@ from miauth.ble.blue import BluePy
 
 parser = argparse.ArgumentParser()
 parser.add_argument("mac", help="mac address of target device")
+parser.add_argument("-m", "--m365", action='store_true', help="use M365 protocol instead")
 parser.add_argument("-n", "--nb", action='store_true', help="use Nb protocol instead")
 parser.add_argument("-c", "--command", help="send command (w/o checksum) to uart and print reply")
 parser.add_argument("-s", "--serial", action='store_true', help="retrieve serial number")
@@ -39,6 +41,7 @@ parser.add_argument("-t", "--token_file", default="./mi_token",
                     help="path to mi token file (default: ./mi_token)")
 
 args = parser.parse_args()
+print(args)
 
 
 def nb_main(ble):
@@ -46,6 +49,7 @@ def nb_main(ble):
 
     print("Connecting")
     nc.connect()
+
     print("Authenticating")
     nc.auth()
 
@@ -67,10 +71,36 @@ def nb_main(ble):
     nc.disconnect()
 
 
+def m365_main(ble):
+    mc = M365Client(ble, debug=args.debug)
+
+    print("Connecting")
+    mc.connect()
+    mc.recover_key()
+
+    if args.command:
+        resp = mc.comm(args.command)
+        print("UART reply:", resp.hex())
+
+    # NOTE: don't send checksums!
+    if args.serial:
+        print("Retrieving serial number")
+        resp = mc.comm("55aa032001100e")
+        print("Serial no.:", resp.decode())
+    if args.version:
+        print("Retrieving firmware version")
+        resp = mc.comm("55aa0320011a10")
+        print("Firmware version:", f"{resp[0]}.{resp[1]}")
+
+    print("Disconnecting")
+    mc.disconnect()
+
+
 def mi_main(ble):
     mc = MiClient(ble, debug=args.debug)
+
     print("Connecting")
-    ble.connect()
+    mc.connect()
 
     if args.register:
         print("Registering")
@@ -107,7 +137,7 @@ Caution: After registration this device will lose coupling to all other apps (re
         print("Firmware version:", f"{resp[0]}.{resp[1]}")
 
     print("Disconnecting")
-    ble.disconnect()
+    mc.disconnect()
 
 
 def main():
@@ -117,6 +147,8 @@ def main():
     if args.nb:
         print("Using Nb")
         nb_main(ble)
+    elif args.m365:
+        m365_main(ble)
     else:
         print("Using Mi")
         mi_main(ble)

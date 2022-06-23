@@ -22,3 +22,21 @@ class UUID(object):
     AUTH = "0000fe95-0000-1000-8000-00805f9b34fb"
     UPNP = "00000010-0000-1000-8000-00805f9b34fb"
     AVDTP = "00000019-0000-1000-8000-00805f9b34fb"
+    KEY = "00000014-0000-1000-8000-00805f9b34fb"
+
+    @staticmethod
+    def from_hex(val):
+        if val.lower() == UUID.UART.replace("-", ""):
+            return UUID.UART
+        elif val.lower() == UUID.TX.replace("-", ""):
+            return UUID.TX
+        elif val.lower() == UUID.RX.replace("-", ""):
+            return UUID.RX
+        elif val.lower() == UUID.AUTH.replace("-", ""):
+            return UUID.AUTH
+        elif val.lower() == UUID.UPNP.replace("-", ""):
+            return UUID.UPNP
+        elif val.lower() == UUID.AVDTP.replace("-", ""):
+            return UUID.AVDTP
+        elif val.lower() == UUID.KEY.replace("-", ""):
+            return UUID.KEY

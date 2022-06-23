@@ -55,3 +55,7 @@ class BLEBase(ABC):
     @abstractmethod
     def read_device_name(self):
         raise NotImplementedError
+
+    @abstractmethod
+    def has_channel(self):
+        raise NotImplementedError

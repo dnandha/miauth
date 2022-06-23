@@ -33,6 +33,7 @@ class BluePy(BLEBase, btle.DefaultDelegate):
             UUID.UPNP: None,
             UUID.TX: None,
             UUID.RX: None,
+            UUID.KEY: None,
         }
 
         btle.DefaultDelegate.__init__(self)
@@ -79,17 +80,12 @@ class BluePy(BLEBase, btle.DefaultDelegate):
         self.p.connect(self.mac, btle.ADDR_TYPE_RANDOM)
         self.p.setDelegate(self)
 
-        svc = self.p.getServiceByUUID(UUID.AUTH)
-        self.channels[UUID.AVDTP] = svc.getCharacteristics(UUID.AVDTP)[0]
-        self.channels[UUID.UPNP] = svc.getCharacteristics(UUID.UPNP)[0]
-
-        svc = self.p.getServiceByUUID(UUID.UART)
-        self.channels[UUID.TX] = svc.getCharacteristics(UUID.TX)[0]
-        self.channels[UUID.RX] = svc.getCharacteristics(UUID.RX)[0]
-
-        self.enable_notify(self.channels[UUID.AVDTP])
-        self.enable_notify(self.channels[UUID.UPNP])
-        self.enable_notify(self.channels[UUID.RX])
+        for ch in self.p.getCharacteristics():
+            uuid = UUID.from_hex(ch.uuid.binVal.hex())
+            self.channels[uuid] = ch
+            if "NOTIFY" in ch.propertiesToString():
+                print("enabling notifications for:", uuid)
+                self.enable_notify(ch)
 
     def disconnect(self):
         self.disable_notify(self.channels[UUID.RX])
@@ -106,3 +102,6 @@ class BluePy(BLEBase, btle.DefaultDelegate):
             raise Exception("Device name not found.")
 
         return ch[0].read()
+
+    def has_channel(self, name):
+        return name in self.channels and self.channels[name] is not None

@@ -77,7 +77,7 @@ class NbClient(object):
 
     def receive_handler(self, cmd, payload):
         if self.debug:
-            print("Got cmd:", cmd)
+            print("Got cmd:", cmd.hex())
 
         if cmd == NbCommand.ACK_INIT:
             self.received_key = payload[:16]

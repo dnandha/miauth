@@ -15,7 +15,9 @@ After installation, you will have access to the `miauth` command line interface 
 `miauth <device_mac> --register`
 1. Login and retrieve serial number and firmware version via Mi EC protocol:
 `miauth -s -v <device_mac>`
-1. Authenticate and retrieve serial number and firmware version via (legacy) Nb protocol:
+1. Retrieve serial number and firmware version via M365 protocol:
+`miauth --m365 -s -v <device_mac>`
+1. Authenticate and retrieve serial number and firmware version via Nb protocol:
 `miauth --nb -s -v <device_mac>`
 
 For a full list of the possible commands run `miauth -h`.

@@ -21,6 +21,7 @@ from miauth.mi.micommand import MiCommand
 from miauth.mi.micrypto import MiCrypto
 from miauth.ble.base import BLEBase
 from miauth.ble.uuid import UUID
+from miauth.util import crc16
 
 
 class MiClient(object):
@@ -64,25 +65,11 @@ class MiClient(object):
         # counter for sent uart commands
         self.uart_it = 0
 
-    def reset(self):
-        self.ble.disconnect()
-        self.__init__(self.ble, debug=self.debug)
-
-    def get_state(self):
-        return self.seq[self.seq_idx][0]
-
-    def next_state(self):
-        self.seq_idx += 1
-
-        if self.debug:
-            print("new state:", self.get_state())
-
-        # exec entry func
-        f = self.seq[self.seq_idx][1]
-        if f is not None:
-            f()
-
     def main_handler(self, data):
+        if len(data) == 0:
+            return
+
+        frm = data[0] + 0x100 * data[1]
         if self.debug:
             print("<-", data.hex(), self.get_state())
 
@@ -101,6 +88,30 @@ class MiClient(object):
         elif self.get_state() == MiClient.State.COMM:
             # TODO: check if correct number of frames received
             self.received_data += data
+
+    def connect(self):
+        self.ble.connect()
+
+    def disconnect(self):
+        self.ble.disconnect()
+
+    def reset(self):
+        self.ble.disconnect()
+        self.__init__(self.ble, debug=self.debug)
+
+    def get_state(self):
+        return self.seq[self.seq_idx][0]
+
+    def next_state(self):
+        self.seq_idx += 1
+
+        if self.debug:
+            print("new state:", self.get_state())
+
+        # exec entry func
+        f = self.seq[self.seq_idx][1]
+        if f is not None:
+            f()
 
     def receive_handler(self, frm, data):
         if frm == 0:
