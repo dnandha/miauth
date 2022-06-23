@@ -206,6 +206,10 @@ public class Crypto {
     }
 
     public static byte[] encryptUart(byte[] key, byte[] iv, byte[] msg, int it, byte[] randBytes) {
+        if (iv == null) {
+            return encryptUartWeak(key, msg, randBytes);
+        }
+
         byte[] itBytes = Util.intToBytes(it, 4);
         byte[] zeroBytes = new byte[]{0,0,0,0};
         byte size = msg[2];
@@ -232,7 +236,6 @@ public class Crypto {
         byte[] crc = Util.crc(data, 2);
 
         byte[] result = new byte[header.length+data.length+crc.length];
-
         System.arraycopy(header, 0, result, 0, header.length);
         System.arraycopy(data, 0, result, header.length, data.length);
         System.arraycopy(crc, 0, result, header.length+data.length, crc.length);
@@ -241,6 +244,10 @@ public class Crypto {
     }
 
     public static byte[] decryptUart(byte[] key, byte[] iv, byte[] msg) {
+        if (iv == null) {
+            return decryptUartWeak(key, msg);
+        }
+
         byte[] it = new byte[2];
         it[0] = msg[3];
         it[1] = msg[4];
@@ -252,7 +259,37 @@ public class Crypto {
         byte[] ct = new byte[msg.length-2-5];
         System.arraycopy(msg, 5, ct, 0, ct.length);
 
-        return decrypt(key, ct, nonce, null);
+        byte[] result = decrypt(key, ct, nonce, null);
+        return Arrays.copyOfRange(result, 0, result.length - 4);
     }
 
+    public static byte[] encryptUartWeak(byte[] key, byte[] msg, byte[] randBytes) {
+        byte[] nMsg = new byte[msg.length + randBytes.length];
+        System.arraycopy(msg, 0, nMsg, 0, msg.length);
+        //byte[] nMsg = Util.combineBytes(msg, randBytes);
+        byte[] ct = new byte[nMsg.length-3];
+        for (int i = 0; i < nMsg.length-3; i++) {
+            ct[i] = (byte) (nMsg[i+3] ^ (i < key.length ? key[i] : 0));
+        }
+
+        byte[] header = new byte[] {0x55, (byte) 0xab};
+        byte[] data = Util.combineBytes(new byte[]{nMsg[2]}, ct);
+        byte[] crc = Util.crc(data, 2);
+
+        byte[] result = new byte[header.length+data.length+crc.length];
+        System.arraycopy(header, 0, result, 0, header.length);
+        System.arraycopy(data, 0, result, header.length, data.length);
+        System.arraycopy(crc, 0, result, header.length+data.length, crc.length);
+
+        return result;
+    }
+
+    public static byte[] decryptUartWeak(byte[] key, byte[] msg) {
+        byte[] result = new byte[msg.length-3];
+        for (int i = 0; i < msg.length-3; i++) {
+            result[i] = (byte) (msg[i+3] ^ (i < key.length ? key[i] : 0));
+        }
+
+        return Arrays.copyOfRange(result, 0, result.length-6);
+    }
 }

@@ -175,4 +175,8 @@ public class AuthBase {
         dispose();
         return new AuthCommand(device, data);
     }
+
+    public Data getData() {
+        return data.getParent();
+    }
 }

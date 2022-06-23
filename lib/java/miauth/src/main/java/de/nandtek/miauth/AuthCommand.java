@@ -23,14 +23,11 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 
 public class AuthCommand extends AuthBase {
-    private final boolean encryption;
-
     private final Queue<Commando> cmdQueue;
     private final Queue<Commando> rcvQueue;
 
     public AuthCommand(IDevice device, IData data) {
         super(device, data);
-        this.encryption = data != null;
         this.cmdQueue = new ArrayDeque<>();
         this.rcvQueue = new ArrayDeque<>();
     }
@@ -43,14 +40,8 @@ public class AuthCommand extends AuthBase {
 
         updateProgress("command: (2/2) handling message " + Util.bytesToHex(message));
 
-        byte[] dec;  //  |x55|xAA| L | D | T | c |...|ck0|ck1|
-        if (encryption) {
-            dec = data.getParent().decryptUart(message);
-            dec = Arrays.copyOfRange(dec, 0, dec.length - 4);
-            System.out.println("command: decoded response:" + Util.bytesToHex(dec));
-        } else {
-            dec = Arrays.copyOfRange(message, 3, message.length - 2);
-        }
+        byte[] dec = data.getParent().decryptUart(message);
+        System.out.println("command: decoded response:" + Util.bytesToHex(dec));
 
         Commando cmd;
         while ((cmd = rcvQueue.poll()) != null) {
@@ -126,11 +117,13 @@ public class AuthCommand extends AuthBase {
 
         System.out.println("command: recv message "+ Util.bytesToHex(data));
         if ((data[0] & 0xff) == 0x55 && data.length > 2) {
+            int extra_bytes;
             if ((data[1] & 0xff) != 0xaa) {
-                receiveBuffer = ByteBuffer.allocate(0x10 + data[2]);
+                extra_bytes = getData().hasIvs() ? 16 : 10;
             } else {
-                receiveBuffer = ByteBuffer.allocate(0x6 + data[2]);
+                extra_bytes = 6;
             }
+            receiveBuffer = ByteBuffer.allocate(extra_bytes + data[2]);
             receiveBuffer.put(data);
         } else if (receiveBuffer != null) {
             receiveBuffer.put(data);
@@ -144,13 +137,7 @@ public class AuthCommand extends AuthBase {
     private void writeChunked(byte[] cmd) {
         updateProgress("command: (1/2) sending command " + Util.bytesToHex(cmd));
 
-        byte[] msg = cmd;
-        if (encryption) {
-            msg = data.getParent().encryptUart(cmd);
-        } else {
-            byte[] crc = Util.crc(Arrays.copyOfRange(msg, 2, msg.length), 2);
-            msg = Util.combineBytes(msg, crc);
-        }
+        byte[] msg = data.getParent().encryptUart(cmd);
         ByteBuffer buf = ByteBuffer.wrap(msg);
         while (buf.remaining() > 0) {
             int len = Math.min(buf.remaining(), ChunkSize+2);

@@ -25,7 +25,7 @@ public interface IDevice {
     void disconnect();
     boolean isConnected();
     void write(UUID uuid, byte[] data, Consumer<byte[]> onWriteSuccess);
-    void read(UUID uuid, Consumer<byte[]> onReadSuccess);
+    void read(UUID uuid, Consumer<byte[]> onReadSuccess, Consumer<Throwable> onReadFail);
     Observable<byte[]> onNotify(UUID uuid);
 
     boolean isDisconnected();

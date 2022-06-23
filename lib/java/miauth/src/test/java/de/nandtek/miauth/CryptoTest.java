@@ -111,6 +111,20 @@ public class CryptoTest extends TestCase {
         Assert.assertEquals("2001100e2cabfff7", Util.bytesToHex(dec));
     }
 
+    public void testEncryptUartWeak() {
+        byte[] key = Util.hexToBytes("de188941a3375d3a8a061e67576e926dc71a7fa3f0cceb97452b4d3227965f9ea8cc75");
+        String inp = "55aa032001100e";
+        byte[] msg = Crypto.encryptUartWeak(key, Util.hexToBytes(inp), new byte[] {0,0,0,0});
+        Assert.assertEquals("55ab03fe19994fa3375d3a8cfc", Util.bytesToHex(msg));
+    }
+
+    public void testDecryptUartWeak() {
+        byte[] key = Util.hexToBytes("de188941a3375d3a8a061e67576e926dc71a7fa3f0cceb97452b4d3227965f9ea8cc75");
+        byte[] msg = Util.hexToBytes("55ab10fd19997396006d0aa5362e57675fa15ef08906519d2ef7");
+        byte[] dec = Crypto.decryptUartWeak(key, msg);
+        Assert.assertEquals("23011032353730302f3030303031333337", Util.bytesToHex(dec));
+    }
+
     public void testRegister() {
         BigInteger val = new BigInteger("48461508383982493215332654270464913273532832436436077476553357014100094140803");
         PrivateKey privKey = Crypto.generatePrivateKey(val);

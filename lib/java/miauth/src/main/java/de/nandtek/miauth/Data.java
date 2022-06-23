@@ -14,6 +14,8 @@
 //
 package de.nandtek.miauth;
 
+import java.util.Arrays;
+
 public class Data {
     protected byte[] token = null;
     protected byte[] bltid = null;
@@ -81,15 +83,16 @@ public class Data {
     }
 
     public byte[] encryptUart(byte[] msg) {
-        if (appKey == null || appIv == null) {
-            return new byte[0]; // todo
+        if (appKey == null) {
+            byte[] crc = Util.crc(Arrays.copyOfRange(msg, 2, msg.length), 2);
+            return Util.combineBytes(msg, crc);
         }
         return Crypto.encryptUart(appKey, appIv, msg, it++);
     }
 
     public byte[] decryptUart(byte[] msg) {
-        if (devKey == null || devIv == null) {
-            return new byte[0]; // todo
+        if (devKey == null) {
+            return Arrays.copyOfRange(msg, 3, msg.length - 2);
         }
         return Crypto.decryptUart(devKey, devIv, msg);
     }
