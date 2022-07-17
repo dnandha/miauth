@@ -19,8 +19,10 @@ package de.nandtek.miauth;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Queue;
+import java.util.UUID;
 
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
@@ -28,6 +30,7 @@ import io.reactivex.functions.Consumer;
 public class AuthCommand extends AuthBase {
     private final Queue<Commando> cmdQueue;
     private final Queue<Commando> rcvQueue;
+    private volatile boolean bursting = false;
 
     public AuthCommand(IDevice device, IData data) {
         super(device, data);
@@ -54,6 +57,8 @@ public class AuthCommand extends AuthBase {
                 cmd.respond(response);
 
                 break;
+            } else {
+                cmd.respond(new byte[0]);
             }
         }
     }
@@ -75,6 +80,7 @@ public class AuthCommand extends AuthBase {
 
     public void clear() {
         cmdQueue.clear();
+        receiveBuffer.clear();
     }
 
     public void push(Commando cmd) {
@@ -85,15 +91,30 @@ public class AuthCommand extends AuthBase {
         cmdQueue.add(new Commando(cmd, onResponse));
     }
 
+    public void burst(ArrayList<byte[]> cmd, Consumer<Integer> onProgress) {
+        ArrayList<byte[]> allCmds = new ArrayList<>();
+        for (int i = 0; i < cmd.size(); i++) {
+            allCmds.addAll(getChunked(cmd.get(i)));
+        }
+
+        for (int i = 0; i < allCmds.size(); i++) {
+            final int finalI = (int)((float)i / allCmds.size() * 100);
+            write(MiUUID.TX, allCmds.get(i), complete -> {
+                onProgress.accept(finalI);
+            });
+        }
+    }
+
     public boolean isEmpty() {
         return cmdQueue.isEmpty();
     }
 
     public void sendNext() {
-        Commando cmd = cmdQueue.poll();
         if (rcvQueue.size() > 10) {
             rcvQueue.poll();
         }
+
+        Commando cmd = cmdQueue.poll();
         if (cmd != null) {
             writeChunked(cmd.getCommand());
             rcvQueue.add(cmd);
@@ -119,7 +140,11 @@ public class AuthCommand extends AuthBase {
         }
 
         System.out.println("command: recv message "+ Util.bytesToHex(data));
-        if ((data[0] & 0xff) == 0x55 && data.length > 2) {
+        if (data.length > 2
+                && (data[0] & 0xff) == 0x55
+                && ((data[1] & 0xff) == 0xaa || (data[1] & 0xff) == 0xab)
+                && (data[2] & 0xff) > 0
+        ) {
             int extra_bytes;
             if ((data[1] & 0xff) != 0xaa) {
                 extra_bytes = getData().hasIvs() ? 16 : 10;
@@ -149,5 +174,20 @@ public class AuthCommand extends AuthBase {
 
             write(MiUUID.TX, chunk);
         }
+    }
+
+    private ArrayList<byte[]> getChunked(byte[] cmd) {
+        ArrayList<byte[]> chunked = new ArrayList<>();
+
+        byte[] msg = data.getParent().encryptUart(cmd);
+        ByteBuffer buf = ByteBuffer.wrap(msg);
+        while (buf.remaining() > 0) {
+            int len = Math.min(buf.remaining(), ChunkSize+2);
+            byte[] chunk = new byte[len];
+            buf.get(chunk, 0, len);
+
+            chunked.add(chunk);
+        }
+        return chunked;
     }
 }

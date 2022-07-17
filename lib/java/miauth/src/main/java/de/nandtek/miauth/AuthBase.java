@@ -18,6 +18,7 @@
 package de.nandtek.miauth;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -65,6 +66,15 @@ public class AuthBase {
     }
 
     protected void write(UUID uuid, byte[] data, Consumer<byte[]> onComplete) {
+        device.write(uuid, data, resp -> {
+            System.out.println("auth: write response " + Util.bytesToHex(resp));
+            if (onComplete != null) {
+                onComplete.accept(resp);
+            }
+        });
+    }
+
+    protected void writeChunk(UUID uuid, ArrayList<byte[]> data, Consumer<byte[]> onComplete) {
         device.write(uuid, data, resp -> {
             System.out.println("auth: write response " + Util.bytesToHex(resp));
             if (onComplete != null) {

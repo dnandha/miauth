@@ -66,12 +66,14 @@ class MiClient(object):
         self.uart_it = 0
 
     def main_handler(self, data):
-        if len(data) == 0:
+        if not data:
+            if self.debug:
+                print("<- Empty data")
             return
 
         frm = data[0] + 0x100 * data[1]
         if self.debug:
-            print("<-", data.hex(), self.get_state())
+            print("<-", data.hex())
 
         frm = data[0]
         if len(data) > 1:
@@ -88,6 +90,11 @@ class MiClient(object):
         elif self.get_state() == MiClient.State.COMM:
             # TODO: check if correct number of frames received
             self.received_data += data
+            dec = MiCrypto.decrypt_uart(
+                self.keys['dev_key'],
+                self.keys['dev_iv'],
+                self.received_data)[3:-4]
+            print(dec)
 
     def connect(self):
         self.ble.connect()
@@ -333,9 +340,8 @@ class MiClient(object):
         self.ble.wait_notify()
 
         if not self.received_data:
-            #raise Exception("No answer received. Firmware not supported.")
             print("No answer received")
-            return
+            return bytes()
 
         return MiCrypto.decrypt_uart(
             self.keys['dev_key'],

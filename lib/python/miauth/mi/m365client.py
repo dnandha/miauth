@@ -98,7 +98,8 @@ class M365Client(btle.DefaultDelegate):
         self.ble.wait_notify()
 
         if not self.received_data:
-            raise Exception("No answer received. Firmware not supported.")
+            print("No answer received")
+            return bytes()
 
         if self.debug:
             print("received:", self.received_data.hex())
