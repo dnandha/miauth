@@ -59,8 +59,8 @@ class NbClient(object):
 
         dec = self.crypto.decrypt(self.receive_buffer)
         if self.debug:
-            print("Received message:", self.receive_buffer.hex())
-            print("Decoded message:", dec.hex())
+            print("Received message:", self.receive_buffer.hex(" "))
+            print("Decoded message:", dec.hex(" "))
 
         if len(dec) == self.receive_buffer[2] + 7:
             cmd = dec[:NbCommand.ACK_LEN]
@@ -77,13 +77,13 @@ class NbClient(object):
 
     def receive_handler(self, cmd, payload):
         if self.debug:
-            print("Got cmd:", cmd.hex())
+            print("Got cmd:", cmd.hex(" "))
 
         if cmd == NbCommand.ACK_INIT:
             self.received_key = payload[:16]
             self.received_serial = payload[16:]
             if self.debug:
-                print("> BLE Key:", self.received_key.hex())
+                print("> BLE Key:", self.received_key.hex(" "))
                 print("> Serial:", self.received_serial.decode())
                 print("Setting ble data/key in crypto")
             self.crypto.set_ble_data(self.received_key)
@@ -140,7 +140,7 @@ class NbClient(object):
 
             msg = self.send_buffer.pop()
             if self.debug:
-                print("Sending message:", msg.hex())
+                print("Sending message:", msg.hex(" "))
 
             # frame has 32 - 12 = 20 bytes --> need to chunk!!
             msg_len = len(msg)

@@ -73,7 +73,7 @@ class M365Client(btle.DefaultDelegate):
             self.key = self.ch_key[0].read()
             self.key += self.comm("55aa0322015020")[9:]
             if self.debug:
-                print("key:", self.key.hex())
+                print("key:", self.key.hex(" "))
 
     def comm(self, cmd):
         if type(cmd) not in [bytearray, bytes]:
@@ -101,7 +101,7 @@ class M365Client(btle.DefaultDelegate):
             raise Exception("No answer received. Firmware not supported.")
 
         if self.debug:
-            print("received:", self.received_data.hex())
+            print("received:", self.received_data.hex(" "))
         res = self.received_data
         if crc16(res[2:-2]) != res[-2:]:
             raise Exception("Checksum mismatch in response")
@@ -110,7 +110,7 @@ class M365Client(btle.DefaultDelegate):
             res = self.crypt(res[3:])[:-4]
 
         if self.debug:
-            print("response:", res.hex())
+            print("response:", res.hex(" "))
         return res[3:-2]
 
     def crypt(self, data):
