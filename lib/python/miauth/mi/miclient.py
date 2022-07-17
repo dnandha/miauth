@@ -16,6 +16,7 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 import time
+from enum import Enum
 
 from miauth.mi.micommand import MiCommand
 from miauth.mi.micrypto import MiCrypto
@@ -25,7 +26,7 @@ from miauth.util import crc16
 
 
 class MiClient(object):
-    class State(object):
+    class State(Enum):
         INIT = -1
         RECV_INFO = 0
         SEND_KEY = 1
