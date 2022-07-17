@@ -55,7 +55,7 @@ def nb_main(ble):
 
     if args.command:
         resp = nc.comm(args.command)
-        print("UART reply:", resp.hex())
+        print("UART reply:", resp.hex(" "))
 
     # NOTE: don't send checksums!
     if args.serial:
@@ -80,7 +80,7 @@ def m365_main(ble):
 
     if args.command:
         resp = mc.comm(args.command)
-        print("UART reply:", resp.hex())
+        print("UART reply:", resp.hex(" "))
 
     # NOTE: don't send checksums!
     if args.serial:
@@ -124,7 +124,7 @@ Caution: After registration this device will lose coupling to all other apps (re
     if args.command:
         print("Sending command:", args.command)
         resp = mc.comm(args.command)
-        print("UART reply:", resp.hex())
+        print("UART reply:", resp.hex(" "))
 
     # NOTE: don't send checksum
     if args.serial:

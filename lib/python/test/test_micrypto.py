@@ -38,7 +38,7 @@ class TestMiCrypto(TestCase):
         self.assertEqual(val, priv_val)
         self.assertEqual(bytes.fromhex("b5dca0aec31a8932d0f53cbcbcf0cfdd833c355cada1025cc076e013439ddec2b4017b546a11d79a758db9d015a2ed8926cf82179b593679187d623b5e430fca"),
                          pub,
-                         pub.hex())
+                         pub.hex(" "))
 
     def test_create_e_share_key(self):
         kp1 = MiCrypto.gen_keypair()
@@ -53,19 +53,19 @@ class TestMiCrypto(TestCase):
         derived = MiCrypto.derive_key(secret, bytes([1, 2, 3, 4]))
         self.assertEqual(bytes.fromhex("40ccc0ee058c3a1d37c08e6f72bc2c57c0a406aaa801a0b1b72f22c8c3ec930d3f151e2eb38a2303d8625a18084daa15667496dcfbc53ba3074ce35d6c90d987"),
                          derived,
-                         derived.hex())
+                         derived.hex(" "))
 
         derived = MiCrypto.derive_key(secret)
         self.assertEqual(bytes.fromhex("104ec0eda032b6d213c245359e585d3bfd4b7c5d683c99f49fd86aaf0de0f6b0bfafb897e3b3727aaa8f8ad6b21a737c1d85c3aae340969f268d2d95ca8848c1"),
                          derived,
-                         derived.hex())
+                         derived.hex(" "))
 
     def test_hash(self):
         key = bytes.fromhex("E2B274F08128A62A9575288BED169B3E")
         hash = MiCrypto.hash(key, bytes([1, 2, 3, 4]))
         self.assertEqual(bytes.fromhex("235d7f910974acb594d76a1652a856ce4f269e3060d7c8512e94b2da345d3083"),
                          hash,
-                         hash.hex())
+                         hash.hex(" "))
 
     def test_encrypt_did(self):
         key = bytes.fromhex("4FEB7165982BF1C6183A51B8CADD0EEC")
@@ -86,7 +86,7 @@ class TestMiCrypto(TestCase):
         
     def test_register(self):
         priv_key = MiCrypto.val_to_private_key(48461508383982493215332654270464913273532832436436077476553357014100094140803)
-        #print(MiCrypto.pub_key_to_bytes(priv_key.public_key()).hex())
+        #print(MiCrypto.pub_key_to_bytes(priv_key.public_key()).hex(" "))
         
         remote_info = bytes.fromhex("0100000000626c742e342e31386e35383236366b67673030")
         remote_pub_key = MiCrypto.bytes_to_pub_key(bytes.fromhex("2afe2a8c1c56e5e70721665cd20d017273111ecaeceb1e4d641e7b7a122a9c3041e5cbc962eefbdb155ffd95847a0d8762803291fc2866c5672ceee0e77d77fc"))
