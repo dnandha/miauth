@@ -99,7 +99,7 @@ class M365Client(btle.DefaultDelegate):
 
         if not self.received_data:
             print("No answer received")
-            return bytes()
+            return b''
 
         if self.debug:
             print("received:", self.received_data.hex(" "))

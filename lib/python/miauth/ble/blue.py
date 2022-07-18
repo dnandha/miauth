@@ -36,15 +36,14 @@ class BluePy(BLEBase, btle.DefaultDelegate):
             UUID.KEY: None,
         }
 
+        self.listen = True
+
         btle.DefaultDelegate.__init__(self)
         BLEBase.__init__(self)
 
     def handleNotification(self, handle, data):
         if self.handler is None:
             raise Exception("BLE set handler first")
-        if not data:
-            return
-
         self.handler(data)
 
     def set_handler(self, handler):
@@ -91,8 +90,11 @@ class BluePy(BLEBase, btle.DefaultDelegate):
         self.disable_notify(self.channels[UUID.RX])
         self.p.disconnect()
 
+    def stop_listening(self):
+        self.listen = False
+
     def wait_notify(self, secs=1.0):
-        while self.p.waitForNotifications(secs):
+        while self.p.waitForNotifications(secs) and self.listen:
             continue
 
     def read_device_name(self):

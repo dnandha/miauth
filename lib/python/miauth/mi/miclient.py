@@ -54,7 +54,8 @@ class MiClient(object):
         self.send_data = b''
 
         # buffer for receive handler
-        self.receive_frames = 0
+        self.expected_frames = 0
+        self.expected_command = b''
         self.received_data = b''
 
         # authentication related stuff
@@ -89,13 +90,17 @@ class MiClient(object):
         elif self.get_state() == MiClient.State.CONFIRM:
             self.confirm_handler(frm)
         elif self.get_state() == MiClient.State.COMM:
-            # TODO: check if correct number of frames received
             self.received_data += data
-            dec = MiCrypto.decrypt_uart(
-                self.keys['dev_key'],
-                self.keys['dev_iv'],
-                self.received_data)[3:-4]
-            print(dec)
+            if not self.expected_frames:
+                self.expected_frames = self.received_data[2]
+            if len(self.received_data) > self.expected_frames + 4:
+                dst, cmd, dec = self.decrypt(self.received_data)
+                if self.expected_frames == len(dec) + 2\
+                   and dst >= 0x23\
+                   and cmd == self.expected_command:
+                    self.received_data = dec
+                else:
+                    self.ble.stop_listening()
 
     def connect(self):
         self.ble.connect()
@@ -123,16 +128,16 @@ class MiClient(object):
 
     def receive_handler(self, frm, data):
         if frm == 0:
-            self.receive_frames = data[4] + 0x100 * data[5]
+            self.expected_frames = data[4] + 0x100 * data[5]
             if self.debug:
-                print("Expecting", self.receive_frames, "frames")
+                print("Expecting", self.expected_frames, "frames")
 
             self.received_data = b''
             self.ble.write(UUID.AVDTP, MiCommand.RCV_RDY)
         else:
             self.received_data += data[2:]
 
-        if frm == self.receive_frames:
+        if frm == self.expected_frames:
             if self.debug:
                 print("All frames received: ", self.received_data.hex(" "))
             self.ble.write(UUID.AVDTP, MiCommand.RCV_OK)
@@ -306,6 +311,23 @@ class MiClient(object):
         while self.get_state() != MiClient.State.COMM:
             self.ble.wait_notify(secs=3.0)
 
+    def send_encrypted(self, cmd):
+        res = MiCrypto.encrypt_uart(self.keys['app_key'],
+                                    self.keys['app_iv'],
+                                    cmd,
+                                    it=self.uart_it)
+        self.ble.write_chunked(UUID.TX, res)
+        self.uart_it += 1
+        self.expected_command = cmd[4:6]
+
+    def decrypt(self, data):
+        dec = MiCrypto.decrypt_uart(
+            self.keys['dev_key'],
+            self.keys['dev_iv'],
+            data)[:-4]  # truncate checksum
+        # return dst, cmd, decoded data
+        return dec[0], dec[1:3], dec[3:]
+
     def comm(self, cmd):
         if self.get_state() != MiClient.State.COMM:
             raise Exception("Not in COMM state. Retry maybe.")
@@ -315,15 +337,16 @@ class MiClient(object):
 
         if cmd[:2] != b'\x55\xAA':
             if cmd[:2] == b'\x5a\xa5':
-                raise Exception("Command must start with 55 AA (M365 PROTOCOl)!\
+                raise Exception("Command must start with 55 AA (M365 protocol)!\
                                 You sent a Nb command, try Nb pairing instead.")
             else:
-                raise Exception("Command must start with 55 AA (M365 PROTOCOl)!")
+                raise Exception("Command must start with 55 AA (M365 protocol)!")
 
+        self.expected_frames = 0
+        self.expected_command = b''
         self.received_data = b''
         if not self.keys:
             self.ble.write_chunked(UUID.TX, cmd)
-
             self.ble.wait_notify()
 
             if not self.received_data:
@@ -331,20 +354,11 @@ class MiClient(object):
 
             return self.received_data
 
-        res = MiCrypto.encrypt_uart(self.keys['app_key'],
-                                    self.keys['app_iv'],
-                                    cmd,
-                                    it=self.uart_it)
-        self.ble.write_chunked(UUID.TX, res)
-        self.uart_it += 1
-
+        self.send_encrypted(cmd)
         self.ble.wait_notify()
 
         if not self.received_data:
-            print("No answer received")
-            return bytes()
+            print("Timeout, no answer received")
+            return b''
 
-        return MiCrypto.decrypt_uart(
-            self.keys['dev_key'],
-            self.keys['dev_iv'],
-            self.received_data)[3:-4]
+        return self.received_data
