@@ -16,6 +16,7 @@
 #     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 import time
+from enum import Enum
 
 from miauth.mi.micommand import MiCommand
 from miauth.mi.micrypto import MiCrypto
@@ -25,7 +26,7 @@ from miauth.util import crc16
 
 
 class MiClient(object):
-    class State(object):
+    class State(Enum):
         INIT = -1
         RECV_INFO = 0
         SEND_KEY = 1
@@ -133,7 +134,7 @@ class MiClient(object):
 
         if frm == self.receive_frames:
             if self.debug:
-                print("All frames received: ", self.received_data.hex())
+                print("All frames received: ", self.received_data.hex(" "))
             self.ble.write(UUID.AVDTP, MiCommand.RCV_OK)
             self.next_state()
 
@@ -180,12 +181,12 @@ class MiClient(object):
         did_ct = MiCrypto.encrypt_did(a, self.remote_info[4:])
 
         if self.debug:
-            print("eShareKey:", e_share_key.hex())
-            print("HKDF result: ", derived_key.hex())
-            print("token:", token.hex())
-            print("bind_key:", bind_key.hex())
-            print("A:", a.hex())
-            print("AES did CT: ", did_ct.hex())
+            print("eShareKey:", e_share_key.hex(" "))
+            print("HKDF result: ", derived_key.hex(" "))
+            print("token:", token.hex(" "))
+            print("bind_key:", bind_key.hex(" "))
+            print("A:", a.hex(" "))
+            print("AES did CT: ", did_ct.hex(" "))
 
         return did_ct, token
 
@@ -204,9 +205,9 @@ class MiClient(object):
         expected_remote_info = MiCrypto.hash(keys['dev_key'], salt_inv)
 
         if self.debug:
-            print("HKDF result:", derived_key.hex())
+            print("HKDF result:", derived_key.hex(" "))
             for key, val in keys.items():
-                print(f"{key.upper()}:", val.hex())
+                print(f"{key.upper()}:", val.hex(" "))
 
         return info, expected_remote_info, keys
 
@@ -214,7 +215,7 @@ class MiClient(object):
         priv_key, pub_key = MiCrypto.gen_keypair()
         if self.debug:
             print("Private Key (Val):", MiCrypto.private_key_to_val(priv_key))
-            print("Public Key (Hex):", MiCrypto.pub_key_to_bytes(pub_key).hex())
+            print("Public Key (Hex):", MiCrypto.pub_key_to_bytes(pub_key).hex(" "))
 
         def on_recv_info_state():
             self.ble.write(UUID.UPNP, MiCommand.CMD_GET_INFO)
@@ -287,7 +288,7 @@ class MiClient(object):
 
             self.send_data, expected_remote_info, self.keys = self.calc_login_info(rand_key)
             assert self.remote_info == expected_remote_info, \
-                f"{self.remote_info.hex()} != {expected_remote_info.hex()}"
+                f"{self.remote_info.hex(' ')} != {expected_remote_info.hex(' ')}"
             self.ble.write(UUID.AVDTP, MiCommand.CMD_SEND_INFO)
 
         self.seq = (
