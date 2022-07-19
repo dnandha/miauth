@@ -29,6 +29,10 @@ class BLEBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def read(self, ch):
+        raise NotImplementedError
+
+    @abstractmethod
     def write(self, ch, data, resp=False):
         raise NotImplementedError
 
