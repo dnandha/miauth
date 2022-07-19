@@ -75,7 +75,7 @@ class MiClient(object):
 
         frm = data[0] + 0x100 * data[1]
         if self.debug:
-            print("<-", data.hex())
+            print("<-", data.hex(" "))
 
         frm = data[0]
         if len(data) > 1:
