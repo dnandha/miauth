@@ -90,8 +90,11 @@ class BluePy(BLEBase, btle.DefaultDelegate):
         self.disable_notify(self.channels[UUID.RX])
         self.p.disconnect()
 
-    def stop_listening(self):
+    def pause_listening(self):
         self.listen = False
+
+    def resume_listening(self):
+        self.listen = True
 
     def wait_notify(self, secs=1.0):
         while self.p.waitForNotifications(secs) and self.listen:

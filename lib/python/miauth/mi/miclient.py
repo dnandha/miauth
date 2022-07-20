@@ -33,7 +33,8 @@ class MiClient(object):
         RECV_KEY = 2
         SEND_DID = 3
         CONFIRM = 4
-        COMM = 5
+        COMM_SEND = 5
+        COMM_RECV = 6
 
     def __init__(self, ble: BLEBase, debug=False):
         self.ble = ble
@@ -42,21 +43,12 @@ class MiClient(object):
         self.ble.set_handler(self.main_handler)
 
         # TODO: implement power button press recognition self.button = False
-        # self.s = btle.Scanner().withDelegate(self)
 
         # state machine is supplied with a sequence of ...
         # if seq = [<state>, <on_state_enter_func()>]
         # TODO: create sequence controller class
         self.seq = ()
         self.seq_idx = 0
-
-        # buffer for send handler
-        self.send_data = b''
-
-        # buffer for receive handler
-        self.expected_frames = 0
-        self.expected_command = b''
-        self.received_data = b''
 
         # authentication related stuff
         self.remote_info = b''
@@ -66,6 +58,17 @@ class MiClient(object):
 
         # counter for sent uart commands
         self.uart_it = 0
+
+        self.clear_buffer()
+
+    def clear_buffer(self):
+        # buffer for send handler
+        self.send_data = b''
+
+        # buffer for receive handler
+        self.expected_frames = 0
+        self.expected_command = b''
+        self.received_data = b''
 
     def main_handler(self, data):
         if not data:
@@ -89,18 +92,25 @@ class MiClient(object):
             self.send_handler(frm, data)
         elif self.get_state() == MiClient.State.CONFIRM:
             self.confirm_handler(frm)
-        elif self.get_state() == MiClient.State.COMM:
+        elif self.get_state() == MiClient.State.COMM_RECV:
+            if data[:2] == bytes.fromhex("55ab"):
+                if not self.expected_frames:
+                    self.expected_frames = data[2]
+                else:
+                    if self.debug:
+                        print("This should not happen.")
+                    self.set_state(MiClient.State.COMM_SEND)
+
             self.received_data += data
-            if not self.expected_frames:
-                self.expected_frames = self.received_data[2]
             if len(self.received_data) > self.expected_frames + 4:
                 dst, cmd, dec = self.decrypt(self.received_data)
                 if self.expected_frames == len(dec) + 2\
                    and dst >= 0x23\
                    and cmd == self.expected_command:
                     self.received_data = dec
+                    self.set_state(MiClient.State.COMM_SEND)
                 else:
-                    self.ble.stop_listening()
+                    raise Exception("Invalid response received.")
 
     def connect(self):
         self.ble.connect()
@@ -115,16 +125,30 @@ class MiClient(object):
     def get_state(self):
         return self.seq[self.seq_idx][0]
 
-    def next_state(self):
-        self.seq_idx += 1
+    def set_state(self, state):
+        for i, s in enumerate(self.seq):
+            if s[0] == state:
+                self.seq_idx = i
+                self.exec_state()
+                return
+        raise Exception(f"{state} not defined in sequence.")
 
-        if self.debug:
-            print("new state:", self.get_state())
-
-        # exec entry func
+    def exec_state(self):
         f = self.seq[self.seq_idx][1]
         if f is not None:
             f()
+
+    def next_state(self):
+        self.seq_idx += 1
+        if self.seq_idx >= len(self.seq):
+            if self.debug:
+                print("Next state requested, but there's none. Resetting.")
+            self.seq_idx = 0
+
+        if self.debug:
+            print("New state:", self.get_state())
+
+        self.exec_state()
 
     def receive_handler(self, frm, data):
         if frm == 0:
@@ -139,7 +163,7 @@ class MiClient(object):
 
         if frm == self.expected_frames:
             if self.debug:
-                print("All frames received: ", self.received_data.hex(" "))
+                print("<<--", self.received_data.hex(" "))
             self.ble.write(UUID.AVDTP, MiCommand.RCV_OK)
             self.next_state()
 
@@ -247,15 +271,15 @@ class MiClient(object):
                     (MiClient.State.RECV_KEY, None),
                     (MiClient.State.SEND_DID, on_send_did_state),
                     (MiClient.State.CONFIRM, on_confirm_state),
-                    (MiClient.State.COMM, None),
+                    (MiClient.State.COMM_SEND, None),
                     )
         self.seq_idx = 0
 
         self.next_state()
-        while self.get_state() != MiClient.State.COMM:
+        while self.get_state() != MiClient.State.COMM_SEND:
             self.ble.wait_notify(secs=3.0)
 
-            if self.get_state() != MiClient.State.COMM:
+            if self.get_state() != MiClient.State.COMM_SEND:
                 # Trick 17: if no response ...
                 # disconnect here and wait for power button press
                 # after button press, reconnect and restart from beginning
@@ -296,6 +320,17 @@ class MiClient(object):
                 f"{self.remote_info.hex(' ')} != {expected_remote_info.hex(' ')}"
             self.ble.write(UUID.AVDTP, MiCommand.CMD_SEND_INFO)
 
+        def on_comm_send_state():
+            if self.debug:
+                print("(Pause listening)")
+            self.ble.pause_listening()
+
+        def on_comm_recv_state():
+            self.clear_buffer()
+            if self.debug:
+                print("(Resuming listening)")
+            self.ble.resume_listening()
+
         self.seq = (
             (MiClient.State.INIT, None),
             (MiClient.State.SEND_KEY, on_send_key_state),
@@ -303,12 +338,13 @@ class MiClient(object):
             (MiClient.State.RECV_INFO, on_recv_info_state),
             (MiClient.State.SEND_DID, on_send_did_state),
             (MiClient.State.CONFIRM, None),
-            (MiClient.State.COMM, None),
+            (MiClient.State.COMM_SEND, on_comm_send_state),
+            (MiClient.State.COMM_RECV, on_comm_recv_state),
         )
         self.seq_idx = 0
 
         self.next_state()
-        while self.get_state() != MiClient.State.COMM:
+        while self.get_state() != MiClient.State.COMM_SEND:
             self.ble.wait_notify(secs=3.0)
 
     def send_encrypted(self, cmd):
@@ -316,6 +352,8 @@ class MiClient(object):
                                     self.keys['app_iv'],
                                     cmd,
                                     it=self.uart_it)
+        if self.debug:
+            print("-->>", res.hex(" "))
         self.ble.write_chunked(UUID.TX, res)
         self.uart_it += 1
         self.expected_command = cmd[4:6]
@@ -325,26 +363,24 @@ class MiClient(object):
             self.keys['dev_key'],
             self.keys['dev_iv'],
             data)[:-4]  # truncate checksum
+        if self.debug:
+            print("<<--", dec.hex(" "))
         # return dst, cmd, decoded data
         return dec[0], dec[1:3], dec[3:]
 
     def comm(self, cmd):
-        if self.get_state() != MiClient.State.COMM:
-            raise Exception("Not in COMM state. Retry maybe.")
+        if self.get_state() != MiClient.State.COMM_SEND:
+            raise Exception("Not in COMM_SEND state. Retry maybe?")
 
         if type(cmd) not in [bytearray, bytes]:
             cmd = bytes.fromhex(cmd)
+        if self.debug:
+            print("->", cmd.hex(" "))
 
-        if cmd[:2] != b'\x55\xAA':
-            if cmd[:2] == b'\x5a\xa5':
-                raise Exception("Command must start with 55 AA (M365 protocol)!\
-                                You sent a Nb command, try Nb pairing instead.")
-            else:
-                raise Exception("Command must start with 55 AA (M365 protocol)!")
+        if cmd[:2] != b'\x55\xaa':
+            raise Exception("Command must start with 55 aa (M365 protocol)!")
 
-        self.expected_frames = 0
-        self.expected_command = b''
-        self.received_data = b''
+        self.set_state(MiClient.State.COMM_RECV)
         if not self.keys:
             self.ble.write_chunked(UUID.TX, cmd)
             self.ble.wait_notify()
@@ -358,7 +394,8 @@ class MiClient(object):
         self.ble.wait_notify()
 
         if not self.received_data:
-            print("Timeout, no answer received")
+            if self.debug:
+                print("Timeout, no answer received")
             return b''
 
         return self.received_data

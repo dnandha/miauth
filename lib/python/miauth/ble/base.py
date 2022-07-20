@@ -49,7 +49,11 @@ class BLEBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def stop_listening(self):
+    def pause_listening(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def resume_listening(self):
         raise NotImplementedError
 
     @abstractmethod
