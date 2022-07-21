@@ -32,11 +32,12 @@ parser.add_argument("-m", "--m365", action='store_true', help="use M365 protocol
 parser.add_argument("-n", "--nb", action='store_true', help="use Nb protocol instead")
 parser.add_argument("-c", "--command", help="send command (w/o checksum) to uart and print reply")
 parser.add_argument("-s", "--serial", action='store_true', help="retrieve serial number")
-parser.add_argument("-v", "--version", action='store_true', help="retrieve firmware version")
-parser.add_argument("-d", "--debug", action='store_true', help="activate debug log")
+parser.add_argument("-f", "--fwver", action='store_true', help="retrieve firmware version")
+parser.add_argument("-v", "--verbose", action='store_true', help="activate verbose (debug) log")
 
 parser.add_argument("-r", "--register", action='store_true',
                     help="register with device / create token (caution: will lose bond to all other apps)")
+parser.add_argument("-d", "--register_did", help="supply did for registeration (advanced)")
 parser.add_argument("-t", "--token_file", default="./mi_token",
                     help="path to mi token file (default: ./mi_token)")
 
@@ -45,7 +46,7 @@ print(args)
 
 
 def nb_main(ble):
-    nc = NbClient(ble, NbCrypto(), debug=args.debug)
+    nc = NbClient(ble, NbCrypto(), debug=args.verbose)
 
     print("Connecting")
     nc.connect()
@@ -62,7 +63,7 @@ def nb_main(ble):
         print("Retrieving serial number")
         resp = nc.comm("5aa5013d2001100e")
         print("Serial no.:", resp.decode())
-    if args.version:
+    if args.fwver:
         print("Retrieving firmware version")
         resp = nc.comm("5aa5013d20011a10")
         print("Firmware version:", f"{resp[0]}.{resp[1]}")
@@ -72,7 +73,7 @@ def nb_main(ble):
 
 
 def m365_main(ble):
-    mc = M365Client(ble, debug=args.debug)
+    mc = M365Client(ble, debug=args.verbose)
 
     print("Connecting")
     mc.connect()
@@ -87,7 +88,7 @@ def m365_main(ble):
         print("Retrieving serial number")
         resp = mc.comm("55aa032001100e")
         print("Serial no.:", resp.decode())
-    if args.version:
+    if args.fwver:
         print("Retrieving firmware version")
         resp = mc.comm("55aa0320011a10")
         print("Firmware version:", f"{resp[0]}.{resp[1]}")
@@ -97,14 +98,14 @@ def m365_main(ble):
 
 
 def mi_main(ble):
-    mc = MiClient(ble, debug=args.debug)
+    mc = MiClient(ble, debug=args.verbose)
 
     print("Connecting")
     mc.connect()
 
     if args.register:
         print("Registering")
-        mc.register()
+        mc.register(did=args.register_did)
         mc.save_token(args.token_file)
         print("Saved token to:", args.token_file)
 
@@ -131,7 +132,7 @@ Caution: After registration this device will lose coupling to all other apps (re
         print("Retrieving serial number")
         resp = mc.comm("55aa032001100e")
         print("Serial number:", resp.decode())
-    if args.version:
+    if args.fwver:
         print("Retrieving firmware version")
         resp = mc.comm("55aa0320011a10")
         print("Firmware version:", f"{resp[0]}.{resp[1]}")
