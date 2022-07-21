@@ -92,12 +92,12 @@ class MiClient(object):
             self.confirm_handler(frm)
         elif self.get_state() == MiClient.State.COMM_RECV:
             if data[:2] == bytes.fromhex("55ab"):
-                if not self.expected_frames:
-                    self.expected_frames = data[2]
+                if self.expected_frames:
+                    if data[2] != self.expected_frames:
+                        print("Rouge message received, ignoring.")
+                        return
                 else:
-                    if self.debug:
-                        print("This should not happen.")
-                    self.set_state(MiClient.State.COMM_SEND)
+                    self.expected_frames = data[2]
 
             self.received_data += data
             if len(self.received_data) >= self.expected_frames * 2:
@@ -364,6 +364,8 @@ class MiClient(object):
         self.ble.write_chunked(UUID.TX, res)
         self.uart_it += 1
         self.expected_command = cmd[4:6]
+        if self.expected_command[0] == 1:
+            self.expected_frames = cmd[-1] + 2
 
     def decrypt(self, data):
         dec = MiCrypto.decrypt_uart(
