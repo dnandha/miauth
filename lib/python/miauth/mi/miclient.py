@@ -135,7 +135,7 @@ class MiClient(object):
 
     def send_handler(self, frm, data):
         if frm != 0:
-            raise Exception("Mi unknown error.")
+            raise Exception("Mi unknown error. Try register.")
 
         if data == MiCommand.RCV_RDY:
             if self.debug:
@@ -173,13 +173,15 @@ class MiClient(object):
         bind_key = derived_key[12:28]
         a = derived_key[28:44]
 
-        did_ct = MiCrypto.encrypt_did(a, self.remote_info)
+        did = self.remote_info
+        did_ct = MiCrypto.encrypt_did(a, did)
 
         if self.debug:
             print("eShareKey:", e_share_key.hex())
             print("HKDF result: ", derived_key.hex())
             print("token:", token.hex())
             print("bind_key:", bind_key.hex())
+            print("did:", did.decode())
             print("A:", a.hex())
             print("AES did CT: ", did_ct.hex())
 
@@ -223,7 +225,7 @@ class MiClient(object):
                                     "connect device to official app first "
                                     "or supply 'register_did' parameter.")
                 self.remote_info = did.encode() + b'\0'
-            if len(self.remote_info) != 18:
+            if len(self.remote_info) != 20:
                 raise Exception("Remote info has wrong length.")
 
             if self.debug:
