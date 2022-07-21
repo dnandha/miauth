@@ -47,7 +47,7 @@ class MiClient(object):
         # state machine is supplied with a sequence of ...
         # if seq = [<state>, <on_state_enter_func()>]
         # TODO: create sequence controller class
-        self.seq = ()
+        self.seq = ((MiClient.State.INIT, None),)
         self.seq_idx = 0
 
         # authentication related stuff
