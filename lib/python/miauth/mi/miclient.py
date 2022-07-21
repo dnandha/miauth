@@ -40,15 +40,13 @@ class MiClient(object):
         self.ble = ble
         self.debug = debug
 
-        self.ble.set_handler(self.main_handler)
-
         # TODO: implement power button press recognition self.button = False
 
         # state machine is supplied with a sequence of ...
         # if seq = [<state>, <on_state_enter_func()>]
         # TODO: create sequence controller class
         self.seq = ((MiClient.State.INIT, None),)
-        self.seq_idx = 0
+        self.seq_idx = -1
 
         # authentication related stuff
         self.remote_info = b''
@@ -102,7 +100,7 @@ class MiClient(object):
                     self.set_state(MiClient.State.COMM_SEND)
 
             self.received_data += data
-            if len(self.received_data) > self.expected_frames + 4:
+            if len(self.received_data) >= self.expected_frames * 2:
                 dst, cmd, dec = self.decrypt(self.received_data)
                 if self.expected_frames == len(dec) + 2\
                    and dst >= 0x23\
@@ -246,6 +244,10 @@ class MiClient(object):
             print("Private Key (Val):", MiCrypto.private_key_to_val(priv_key))
             print("Public Key (Hex):", MiCrypto.pub_key_to_bytes(pub_key).hex(" "))
 
+        def on_init_state():
+            self.ble.set_handler(self.main_handler)
+            self.next_state()
+
         def on_recv_info_state():
             self.ble.write(UUID.UPNP, MiCommand.CMD_GET_INFO)
 
@@ -265,15 +267,16 @@ class MiClient(object):
         def on_confirm_state():
             self.ble.write(UUID.UPNP, MiCommand.CMD_AUTH)
 
-        self.seq = ((MiClient.State.INIT, None),
-                    (MiClient.State.RECV_INFO, on_recv_info_state()),
-                    (MiClient.State.SEND_KEY, on_send_key_state),
-                    (MiClient.State.RECV_KEY, None),
-                    (MiClient.State.SEND_DID, on_send_did_state),
-                    (MiClient.State.CONFIRM, on_confirm_state),
-                    (MiClient.State.COMM_SEND, None),
-                    )
-        self.seq_idx = 0
+        self.seq = (
+            (MiClient.State.INIT, on_init_state),
+            (MiClient.State.RECV_INFO, on_recv_info_state),
+            (MiClient.State.SEND_KEY, on_send_key_state),
+            (MiClient.State.RECV_KEY, None),
+            (MiClient.State.SEND_DID, on_send_did_state),
+            (MiClient.State.CONFIRM, on_confirm_state),
+            (MiClient.State.COMM_SEND, None),
+        )
+        self.seq_idx = -1
 
         self.next_state()
         while self.get_state() != MiClient.State.COMM_SEND:
@@ -304,6 +307,10 @@ class MiClient(object):
     def login(self):
         rand_key = MiCrypto.gen_rand_key()
 
+        def on_init_state():
+            self.ble.set_handler(self.main_handler)
+            self.next_state()
+
         def on_send_key_state():
             self.send_data = rand_key
             self.ble.write(UUID.UPNP, MiCommand.CMD_LOGIN)
@@ -332,7 +339,7 @@ class MiClient(object):
             self.ble.resume_listening()
 
         self.seq = (
-            (MiClient.State.INIT, None),
+            (MiClient.State.INIT, on_init_state),
             (MiClient.State.SEND_KEY, on_send_key_state),
             (MiClient.State.RECV_KEY, None),
             (MiClient.State.RECV_INFO, on_recv_info_state),
@@ -341,7 +348,7 @@ class MiClient(object):
             (MiClient.State.COMM_SEND, on_comm_send_state),
             (MiClient.State.COMM_RECV, on_comm_recv_state),
         )
-        self.seq_idx = 0
+        self.seq_idx = -1
 
         self.next_state()
         while self.get_state() != MiClient.State.COMM_SEND:

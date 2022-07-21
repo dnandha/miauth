@@ -42,9 +42,10 @@ class BluePy(BLEBase, btle.DefaultDelegate):
         BLEBase.__init__(self)
 
     def handleNotification(self, handle, data):
-        if self.handler is None:
-            raise Exception("BLE set handler first")
-        self.handler(data)
+        if self.handler is not None:
+            self.handler(data)
+        else:
+            print("BLE message received but no handler.")
 
     def set_handler(self, handler):
         self.handler = handler
