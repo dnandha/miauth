@@ -80,7 +80,10 @@ class MiClient(object):
         if self.debug:
             print("<-", data.hex(" "))
 
-        if self.get_state() == MiClient.State.COMM_RECV:
+        if data in MiCommand.AUTH_ERRORS:
+            raise Exception("Authentication failed!"
+                            "Previous session not reset, BLE DID missing or something.")
+        elif self.get_state() == MiClient.State.COMM_RECV:
             if data[:2] == bytes.fromhex("55ab"):
                 if self.expected_frames:
                     if data[2] != self.expected_frames:

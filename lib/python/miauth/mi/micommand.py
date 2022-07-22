@@ -39,10 +39,19 @@ class MiCommand(object):
     CFM_LOGIN_OK = b'\x21\x00\x00\x00'
     CFM_LOGIN_ERR = b'\x23\x00\x00\x00'
 
+    AUTH_ERR0 = b'\xe0\x00\x00\x00'
+    AUTH_ERR1 = b'\xe1\x00\x00\x00'
+    AUTH_ERR2 = b'\xe2\x00\x00\x00'
+    AUTH_ERR3 = b'\xe3\x00\x00\x00'
+
     ALL = [
         CMD_GET_INFO, CMD_SET_KEY, CMD_LOGIN, CMD_AUTH,
         CMD_SEND_DATA, CMD_SEND_DID, CMD_SEND_KEY, CMD_SEND_INFO,
         RCV_RDY, RCV_OK, RCV_TOUT, RCV_ERR,
         RCV_RESP_KEY, RCV_RESP_INFO,
         CFM_REGISTER_OK, CFM_REGISTER_ERR, CFM_LOGIN_OK, CFM_LOGIN_ERR
+    ]
+
+    AUTH_ERRORS = [
+        AUTH_ERR0, AUTH_ERR1, AUTH_ERR2, AUTH_ERR3
     ]
