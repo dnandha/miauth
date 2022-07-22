@@ -68,6 +68,8 @@ class MiClient(object):
         self.expected_command = b''
         self.received_data = b''
 
+        self.uart_ignore = False
+
     def main_handler(self, data):
         if not data:
             if self.debug:
@@ -79,12 +81,18 @@ class MiClient(object):
 
         if self.get_state() == MiClient.State.COMM_RECV:
             if data[:2] == bytes.fromhex("55ab"):
+                self.uart_ignore = False
                 if self.expected_frames:
                     if data[2] != self.expected_frames:
-                        print("Rouge message received, ignoring.")
+                        print("Rogue message received, start ignoring.")
+                        self.uart_ignore = True
                         return
                 else:
+                    # this is the case for non-read commands
                     self.expected_frames = data[2]
+
+            if self.uart_ignore:
+                return
 
             self.received_data += data
             if len(self.received_data) >= self.expected_frames * 2:
@@ -186,11 +194,11 @@ class MiClient(object):
     def confirm_handler(self, frm, data):
         if data == MiCommand.CFM_REGISTER_OK:
             print("Mi authentication successful!")
-        elif frm == MiCommand.CFM_REGISTER_ERR:
+        elif data == MiCommand.CFM_REGISTER_ERR:
             print("Mi authentication failed!")
-        elif frm == MiCommand.CFM_LOGIN_OK:
+        elif data == MiCommand.CFM_LOGIN_OK:
             print("Mi login successful!")
-        elif frm == MiCommand.CFM_LOGIN_ERR:
+        elif data == MiCommand.CFM_LOGIN_ERR:
             print("Mi login failed!")
         else:
             print("Mi unknown response...")
