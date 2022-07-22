@@ -31,7 +31,7 @@ public class AuthRegister extends AuthBase {
     }
 
     @Override
-    protected void handleMessage(byte[] message) {
+    protected void handleMessage(byte[] message) throws Exception {
        System.out.println("register: handling message - " + Util.bytesToHex(message));
 
         if (!data.hasRemoteInfo()) {
@@ -44,7 +44,11 @@ public class AuthRegister extends AuthBase {
                 write(MiUUID.UPNP, CommandRegister.KeyExchange);
 
                 updateProgress("register: remote info received (4/9)");
-                data.setRemoteInfo(message);
+                if (!data.setRemoteInfo(message)) {
+                    stopNotifyTrigger.onNext(true);
+                    updateProgress("register: failed (9/9)");
+                    onComplete.accept(false);
+                }
             }
         } else if (!data.hasRemoteKey()) {
             updateProgress("register: handling remote key (5/9)");
@@ -74,21 +78,13 @@ public class AuthRegister extends AuthBase {
                 //compositeDisposable.dispose();
 
                 updateProgress("register: succeeded (9/9)");
-                try {
-                    onComplete.accept(true);
-                } catch (Exception e) {
-                    System.err.println(e.getMessage());
-                }
+                onComplete.accept(true);
             } else if (Arrays.equals(message, CommandRegister.AuthDenied)) {
                 stopNotifyTrigger.onNext(true);
                 //compositeDisposable.dispose();
 
                 updateProgress("register: failed (9/9)");
-                try {
-                    onComplete.accept(false);
-                } catch (Exception e) {
-                    System.err.println(e.getMessage());
-                }
+                onComplete.accept(false);
             }
         }
     }
@@ -100,13 +96,13 @@ public class AuthRegister extends AuthBase {
         // TODO: improve this
         if (!device.isConnected()) {
             updateProgress("register: connecting (1/9)");
-            init(onConnect -> {
+            init(3, onConnect -> {
                 updateProgress("register: sending request (2/9)");
                 write(MiUUID.UPNP, CommandRegister.GetInfo);
             }, timeout -> onComplete.accept(false));
         } else {
             updateProgress("register: subscribing (1/9)");
-            subscribeNotify(timeout -> onComplete.accept(false));
+            subscribeNotify(3, timeout -> onComplete.accept(false));
             updateProgress("register: sending request (2/9)");
             write(MiUUID.UPNP, CommandRegister.GetInfo);
         }

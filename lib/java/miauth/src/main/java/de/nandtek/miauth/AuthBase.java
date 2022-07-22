@@ -96,7 +96,7 @@ public class AuthBase {
             write(uuid, chunk);
         }
     }
-    protected void subscribeNotify(Consumer<Boolean> onTimeout) {
+    protected void subscribeNotify(int timeout, Consumer<Boolean> onTimeout) {
         System.out.println("auth: subscribe");
         final Disposable upnpSub = device.onNotify(MiUUID.UPNP)
                 .takeUntil(stopNotifyTrigger)
@@ -106,8 +106,9 @@ public class AuthBase {
         );
         final Disposable avdtpSub = device.onNotify(MiUUID.AVDTP)
                 .takeUntil(stopNotifyTrigger)
-                .timeout(3, TimeUnit.SECONDS, Observable.create(emitter -> {
+                .timeout(timeout, TimeUnit.SECONDS, Observable.create(emitter -> {
                     System.out.println("auth: subscription timeout");
+                    onTimeout.accept(true);
                     stopNotifyTrigger.onNext(true);
                 }))
                 .subscribe(
@@ -118,7 +119,6 @@ public class AuthBase {
         final Disposable stopSub = stopNotifyTrigger.subscribe(
                 next -> {
                     System.out.println("auth: subscription stopped");
-                    onTimeout.accept(true);
                     //compositeDisposable.dispose();
         });
 
@@ -127,16 +127,16 @@ public class AuthBase {
         compositeDisposable.add(stopSub);
     }
 
-    protected void init(Consumer<Boolean> callback, Consumer<Boolean> onTimeout) {
+    protected void init(int timeout, Consumer<Boolean> callback, Consumer<Boolean> onTimeout) {
         device.prepare();
         device.connect(connect -> {
-            subscribeNotify(onTimeout);
+            subscribeNotify(timeout, onTimeout);
 
             callback.accept(connect);
         });
     }
 
-    protected void receiveParcel(byte[] data) {
+    protected void receiveParcel(byte[] data) throws Exception {
         System.out.println("auth: recv message " + Util.bytesToHex(data));
         int frame = data[0] & 0xff + 0x100 * data[1] & 0xff;
         System.out.println("auth: recv frame " + frame);
@@ -178,7 +178,7 @@ public class AuthBase {
         }
     }
 
-    protected void handleMessage(byte[] message) {
+    protected void handleMessage(byte[] message) throws Exception {
     }
 
     public void exec() {
