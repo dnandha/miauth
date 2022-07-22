@@ -74,23 +74,7 @@ class MiClient(object):
                 print("<- Empty data")
             return
 
-        frm = data[0] + 0x100 * data[1]
-        if self.debug:
-            print("<-", data.hex(" "))
-
-        frm = data[0]
-        if len(data) > 1:
-            frm += 0x100 * data[1]
-
-        if self.get_state() in [MiClient.State.RECV_INFO,
-                                MiClient.State.RECV_KEY]:
-            self.receive_handler(frm, data)
-        elif self.get_state() in [MiClient.State.SEND_KEY,
-                                  MiClient.State.SEND_DID]:
-            self.send_handler(frm, data)
-        elif self.get_state() == MiClient.State.CONFIRM:
-            self.confirm_handler(frm)
-        elif self.get_state() == MiClient.State.COMM_RECV:
+        if self.get_state() == MiClient.State.COMM_RECV:
             if data[:2] == bytes.fromhex("55ab"):
                 if self.expected_frames:
                     if data[2] != self.expected_frames:
@@ -109,6 +93,23 @@ class MiClient(object):
                     self.set_state(MiClient.State.COMM_SEND)
                 else:
                     raise Exception("Invalid response received.")
+        elif data[0] < 55:
+            frm = data[0] + 0x100 * data[1]
+            if self.debug:
+                print("<-", data.hex(" "))
+
+            frm = data[0]
+            if len(data) > 1:
+                frm += 0x100 * data[1]
+
+            if self.get_state() in [MiClient.State.RECV_INFO,
+                                    MiClient.State.RECV_KEY]:
+                self.receive_handler(frm, data)
+            elif self.get_state() in [MiClient.State.SEND_KEY,
+                                      MiClient.State.SEND_DID]:
+                self.send_handler(frm, data)
+            elif self.get_state() == MiClient.State.CONFIRM:
+                self.confirm_handler(frm)
 
     def connect(self):
         self.ble.connect()
@@ -323,8 +324,8 @@ class MiClient(object):
             self.remote_info = self.received_data
 
             self.send_data, expected_remote_info, self.keys = self.calc_login_info(rand_key)
-            assert self.remote_info == expected_remote_info, \
-                f"{self.remote_info.hex(' ')} != {expected_remote_info.hex(' ')}"
+            if (self.remote_info != expected_remote_info):
+                raise Exception("Remote info doesn't match expected info, try registering again.")
             self.ble.write(UUID.AVDTP, MiCommand.CMD_SEND_INFO)
 
         def on_comm_send_state():
