@@ -74,6 +74,9 @@ class MiClient(object):
                 print("<- Empty data")
             return
 
+        if self.debug:
+            print("<-", data.hex(" "))
+
         if self.get_state() == MiClient.State.COMM_RECV:
             if data[:2] == bytes.fromhex("55ab"):
                 if self.expected_frames:
@@ -93,11 +96,8 @@ class MiClient(object):
                     self.set_state(MiClient.State.COMM_SEND)
                 else:
                     raise Exception("Invalid response received.")
-        elif data[0] < 55:
-            frm = data[0] + 0x100 * data[1]
-            if self.debug:
-                print("<-", data.hex(" "))
-
+        elif data in MiCommand.ALL\
+                or (data[0] > 0 and data[0] <= self.expected_frames):
             frm = data[0]
             if len(data) > 1:
                 frm += 0x100 * data[1]
@@ -109,7 +109,7 @@ class MiClient(object):
                                       MiClient.State.SEND_DID]:
                 self.send_handler(frm, data)
             elif self.get_state() == MiClient.State.CONFIRM:
-                self.confirm_handler(frm)
+                self.confirm_handler(frm, data)
 
     def connect(self):
         self.ble.connect()
@@ -183,14 +183,14 @@ class MiClient(object):
                 print("Mi confirmed key receive")
             self.next_state()
 
-    def confirm_handler(self, frm):
-        if frm == 0x11:
+    def confirm_handler(self, frm, data):
+        if data == MiCommand.CFM_REGISTER_OK:
             print("Mi authentication successful!")
-        elif frm == 0x12:
+        elif frm == MiCommand.CFM_REGISTER_ERR:
             print("Mi authentication failed!")
-        elif frm == 0x21:
+        elif frm == MiCommand.CFM_LOGIN_OK:
             print("Mi login successful!")
-        elif frm == 0x23:
+        elif frm == MiCommand.CFM_LOGIN_ERR:
             print("Mi login failed!")
         else:
             print("Mi unknown response...")
