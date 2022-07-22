@@ -270,7 +270,7 @@ class MiClient(object):
                 time.sleep(5)
                 self.ble.connect()
 
-                return self.register()  # return because of recursion
+                return self.register(did=did)  # return because of recursion
             else:
                 break
 
