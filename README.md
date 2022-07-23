@@ -3,7 +3,7 @@ Many great apps stopped working because of protocol changes in the Xiaomi BLE co
 
 After spending many, many days and nights unraveling the new authentication protocol I have decided to release my work free of charge. My wish is that those apps and projects that went dead (and are getting review bombed...) soon come back to live.
 
-Feel free to donate button if you'd like to support my future research work.
+Feel free to donate if you'd like to support my future research work:
 [![](https://www.paypalobjects.com/de_DE/DE/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=G8FUS4LH2THES)
 
 ## Documentation
