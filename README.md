@@ -37,3 +37,7 @@ See LICENSE.md
 
 ## Disclaimer
 I'm in no way affiliated with Xiaomi or any of their subsidiaries and products. This code has been provided for research purposes only.
+
+## Donate
+Feel free to use the donation button if you'd like to support my future research work.
+[![](https://www.paypalobjects.com/de_DE/DE/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=G8FUS4LH2THES)
