@@ -3,6 +3,9 @@ Many great apps stopped working because of protocol changes in the Xiaomi BLE co
 
 After spending many, many days and nights unraveling the new authentication protocol I have decided to release my work free of charge. My wish is that those apps and projects that went dead (and are getting review bombed...) soon come back to live.
 
+Feel free to donate button if you'd like to support my future research work.
+[![](https://www.paypalobjects.com/de_DE/DE/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=G8FUS4LH2THES)
+
 ## Documentation
 In order to understand the authentication process I captured BLE communication during the pairing process between Mi Home app and the target device. I have fully described the communication protocol and cryptography in the [Documentation](doc/).
 
@@ -37,7 +40,3 @@ See LICENSE.md
 
 ## Disclaimer
 I'm in no way affiliated with Xiaomi or any of their subsidiaries and products. This code has been provided for research purposes only.
-
-## Donate
-Feel free to use the donation button if you'd like to support my future research work.
-[![](https://www.paypalobjects.com/de_DE/DE/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=G8FUS4LH2THES)
