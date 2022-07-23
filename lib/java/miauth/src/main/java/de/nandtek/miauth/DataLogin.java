@@ -77,8 +77,9 @@ public class DataLogin implements IData {
     }
 
     @Override
-    public void setRemoteInfo(byte[] data) {
+    public boolean setRemoteInfo(byte[] data) {
         remoteInfo = data;
+        return true;
     }
 
     @Override

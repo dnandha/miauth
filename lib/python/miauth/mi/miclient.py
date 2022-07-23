@@ -184,17 +184,17 @@ class MiClient(object):
 
     def send_handler(self, frm, data):
         if frm != 0:
-            return
+            raise Exception("Mi unknown error. Try register.")
 
         if data == MiCommand.RCV_RDY:
             if self.debug:
                 print("Mi ready to receive key")
             self.ble.write_parcel(UUID.AVDTP, self.send_data)
-        if data == MiCommand.RCV_TOUT:
+        elif data == MiCommand.RCV_TOUT:
             raise Exception("Mi sent RCV timeout.")
-        if data == MiCommand.RCV_ERR:
+        elif data == MiCommand.RCV_ERR:
             raise Exception("Mi sent some RCV error?")
-        if data == MiCommand.RCV_OK:
+        elif data == MiCommand.RCV_OK:
             if self.debug:
                 print("Mi confirmed key receive")
             self.next_state()
@@ -222,15 +222,17 @@ class MiClient(object):
         bind_key = derived_key[12:28]
         a = derived_key[28:44]
 
-        did_ct = MiCrypto.encrypt_did(a, self.remote_info[4:])
+        did = self.remote_info
+        did_ct = MiCrypto.encrypt_did(a, did)
 
         if self.debug:
-            print("eShareKey:", e_share_key.hex(" "))
-            print("HKDF result: ", derived_key.hex(" "))
-            print("token:", token.hex(" "))
-            print("bind_key:", bind_key.hex(" "))
-            print("A:", a.hex(" "))
-            print("AES did CT: ", did_ct.hex(" "))
+            print("eShareKey:", e_share_key.hex())
+            print("HKDF result: ", derived_key.hex())
+            print("token:", token.hex())
+            print("bind_key:", bind_key.hex())
+            print("did:", did.decode())
+            print("A:", a.hex())
+            print("AES did CT: ", did_ct.hex())
 
         return did_ct, token
 
@@ -249,17 +251,17 @@ class MiClient(object):
         expected_remote_info = MiCrypto.hash(keys['dev_key'], salt_inv)
 
         if self.debug:
-            print("HKDF result:", derived_key.hex(" "))
+            print("HKDF result:", derived_key.hex())
             for key, val in keys.items():
-                print(f"{key.upper()}:", val.hex(" "))
+                print(f"{key.upper()}:", val.hex())
 
         return info, expected_remote_info, keys
 
-    def register(self):
+    def register(self, did=None):
         priv_key, pub_key = MiCrypto.gen_keypair()
         if self.debug:
             print("Private Key (Val):", MiCrypto.private_key_to_val(priv_key))
-            print("Public Key (Hex):", MiCrypto.pub_key_to_bytes(pub_key).hex(" "))
+            print("Public Key (Hex):", MiCrypto.pub_key_to_bytes(pub_key).hex())
 
         def on_init_state():
             self.ble.set_handler(self.main_handler)
@@ -269,7 +271,18 @@ class MiClient(object):
             self.ble.write(UUID.UPNP, MiCommand.CMD_GET_INFO)
 
         def on_send_key_state():
-            self.remote_info = self.received_data
+            self.remote_info = self.received_data[4:]
+            if not self.remote_info:
+                if did is None:
+                    raise Exception("Remote info empty, "
+                                    "connect device to official app first "
+                                    "or supply 'register_did' parameter.")
+                self.remote_info = did.encode() + b'\0'
+            if len(self.remote_info) != 20:
+                raise Exception("Remote info has wrong length.")
+
+            if self.debug:
+                print("Remote info received:", self.remote_info.hex())
 
             self.send_data = MiCrypto.pub_key_to_bytes(pub_key)
             self.ble.write(UUID.UPNP, MiCommand.CMD_SET_KEY)
@@ -277,6 +290,8 @@ class MiClient(object):
 
         def on_send_did_state():
             self.remote_key = self.received_data
+            if self.debug:
+                print("Remote key received:", self.remote_key.hex())
 
             self.send_data, self.token = self.calc_did(priv_key)
             self.ble.write(UUID.AVDTP, MiCommand.CMD_SEND_DID)
@@ -309,7 +324,7 @@ class MiClient(object):
                 time.sleep(5)
                 self.ble.connect()
 
-                return self.register()  # return because of recursion
+                return self.register(did=did)  # return because of recursion
             else:
                 break
 
@@ -335,9 +350,13 @@ class MiClient(object):
 
         def on_recv_info_state():
             self.remote_key = self.received_data
+            if self.debug:
+                print("Remote key received:", self.remote_key.hex())
 
         def on_send_did_state():
             self.remote_info = self.received_data
+            if self.debug:
+                print("Remote info received:", self.remote_info.hex())
 
             self.send_data, expected_remote_info, self.keys = self.calc_login_info(rand_key)
             if (self.remote_info != expected_remote_info):
@@ -417,6 +436,7 @@ class MiClient(object):
             return self.received_data
 
         self.send_encrypted(cmd)
+
         self.ble.wait_notify()
 
         if not self.received_data:

@@ -39,10 +39,6 @@ class M365Client(btle.DefaultDelegate):
 
         self.ble.set_handler(self.main_handler)
 
-        self.ch_tx = None
-        self.ch_rx = None
-
-        self.ch_key = None
         self.key = None
 
         # buffer for receive handler
@@ -70,7 +66,7 @@ class M365Client(btle.DefaultDelegate):
     def recover_key(self):
         if self.ble.has_channel(UUID.KEY):
             print("found old 55ab encryption -> recovering key")
-            self.key = self.ch_key[0].read()
+            self.key = self.ble.read(UUID.KEY)
             self.key += self.comm("55aa0322015020")[9:]
             if self.debug:
                 print("key:", self.key.hex(" "))

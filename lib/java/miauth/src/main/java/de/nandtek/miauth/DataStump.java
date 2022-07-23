@@ -45,9 +45,7 @@ public class DataStump implements IData {
     }
 
     @Override
-    public void setRemoteInfo(byte[] data) {
-
-    }
+    public boolean setRemoteInfo(byte[] data) { return false; }
 
     @Override
     public void setRemoteKey(byte[] data) {

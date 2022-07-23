@@ -22,7 +22,7 @@ public interface IData {
     boolean hasMyKey();
     boolean hasRemoteInfo();
     boolean hasRemoteKey();
-    void setRemoteInfo(byte[] data);
+    boolean setRemoteInfo(byte[] data);
     void setRemoteKey(byte[] data);
     byte[] getRemoteKey();
     byte[] getRemoteInfo();

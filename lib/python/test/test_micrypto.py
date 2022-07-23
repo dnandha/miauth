@@ -73,17 +73,17 @@ class TestMiCrypto(TestCase):
         self.assertEqual(bytes.fromhex("aeebd70f8c2bdf8c"), ct, ct.hex())
 
     def test_encrypt_uart(self):
-        app_key = bytes.fromhex("239b3c7e92dc6d6d2fa174a215aedf2e")
-        app_iv = bytes([1, 2])
+        app_key = bytes.fromhex("9951fb8edf3921d61d15d56b45d38a46")
+        app_iv = bytes.fromhex("642b0a93")
         ct = MiCrypto.encrypt_uart(app_key, app_iv, bytes.fromhex("55aa032001100e"), rand=bytes([1, 2, 3, 4]))
-        self.assertEqual(bytes.fromhex("55ab030000adf399086b9e0bd059366ad10dfa"), ct, ct.hex())
+        self.assertEqual(bytes.fromhex("55ab03000003dbfd07465635dcbd3b2d7acefa"), ct, ct.hex())
 
     def test_decrypt_uart(self):
-        dev_key = bytes.fromhex("239b3c7e92dc6d6d2fa174a215aedf2e")
-        dev_iv = bytes([1, 2])
-        ct = MiCrypto.encrypt_uart(dev_key, dev_iv, bytes.fromhex("55aa032001100e"), rand=bytes([1, 2, 3, 4]))
-        self.assertEqual(bytes.fromhex("55ab030000adf399086b9e0bd059366ad10dfa"), ct, ct.hex())
-        
+        dev_key = bytes.fromhex("887ed6ae8ea3189546a55f0d0a6216ce")
+        dev_iv = bytes.fromhex("659b7362")
+        ct = MiCrypto.decrypt_uart(dev_key, dev_iv, bytes.fromhex("55ab1001004c4e49c65c208435f7e050e56904adb8fe6e2eb1297cf9e0afbaf2"))
+        self.assertEqual(bytes.fromhex("23011032353730302f3030303031333337cd65c322"), ct, ct.hex())
+
     def test_register(self):
         priv_key = MiCrypto.val_to_private_key(48461508383982493215332654270464913273532832436436077476553357014100094140803)
         #print(MiCrypto.pub_key_to_bytes(priv_key.public_key()).hex(" "))

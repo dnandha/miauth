@@ -30,17 +30,13 @@ public class AuthLogin extends AuthBase {
     }
 
     @Override
-    protected void handleMessage(byte[] message) {
+    protected void handleMessage(byte[] message) throws Exception {
         System.out.println("login: handling message");
 
         if (Arrays.equals(message, CommandLogin.Error)) {
-            updateProgress("login: failed, missing id (9/9)");
             stopNotifyTrigger.onNext(true);
-            try {
-                onComplete.accept(false);
-            } catch (Exception e) {
-                System.err.println(e.getMessage());
-            }
+            updateProgress("login: failed, missing id (9/9)");
+            onComplete.accept(false);
         }
 
         if (!data.hasRemoteKey()) {
@@ -66,11 +62,7 @@ public class AuthLogin extends AuthBase {
                 if (!data.calculate()) {
                     stopNotifyTrigger.onNext(true);
                     updateProgress("login: failed, invalid token (9/9)");
-                    try {
-                        onComplete.accept(false);
-                    } catch (Exception e) {
-                        System.err.println(e.getMessage());
-                    }
+                    onComplete.accept(false);
                 } else {
                     write(MiUUID.AVDTP, CommandLogin.Received, complete ->
                             write(MiUUID.AVDTP, CommandLogin.SendingCt));
@@ -86,21 +78,13 @@ public class AuthLogin extends AuthBase {
                 //compositeDisposable.dispose();
 
                 updateProgress("login: succeeded (9/9)");
-                try {
-                    onComplete.accept(true);
-                } catch (Exception e) {
-                    System.err.println(e.getMessage());
-                }
+                onComplete.accept(true);
             } else if (Arrays.equals(message, CommandLogin.AuthDenied)) {
                 stopNotifyTrigger.onNext(true);
                 //compositeDisposable.dispose();
 
                 updateProgress("login: failed (9/9)");
-                try {
-                    onComplete.accept(false);
-                } catch (Exception e) {
-                    System.err.println(e.getMessage());
-                }
+                onComplete.accept(false);
             }
         }
     }
@@ -110,17 +94,21 @@ public class AuthLogin extends AuthBase {
         // TODO: improve this
         if (!device.isConnected()) {
             updateProgress("login: connecting (1/9)");
-            init(onConnect -> {
+            init(10, onConnect -> {
                 updateProgress("login: sending request (2/9)");
                 write(MiUUID.UPNP, CommandLogin.Request);
                 write(MiUUID.AVDTP, CommandLogin.SendingKey);
             }, onTimeout -> {
-                //onComplete.accept(false);  // TODO
+                stopNotifyTrigger.onNext(true);
+                updateProgress("login: failed (9/9)");
+                onComplete.accept(false);
             });
         } else {
             updateProgress("login: subscribing (1/9)");
-            subscribeNotify(timeout -> {
-                //onComplete.accept(false);  // TODO
+            subscribeNotify(10, timeout -> {
+                stopNotifyTrigger.onNext(true);
+                updateProgress("login: failed (9/9)");
+                onComplete.accept(false);
             });
             updateProgress("login: sending request (2/9)");
             write(MiUUID.UPNP, CommandLogin.Request);

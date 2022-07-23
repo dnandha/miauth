@@ -62,6 +62,9 @@ class BluePy(BLEBase, btle.DefaultDelegate):
         if resp['rsp'][0] != 'wr':
             raise Exception("BLE could not setup notifications.")
 
+    def read(self, ch):
+        return self.channels[ch].read()
+
     def write(self, ch, data, resp=False):
         self.channels[ch].write(data, resp)
 
@@ -103,7 +106,6 @@ class BluePy(BLEBase, btle.DefaultDelegate):
 
     def read_device_name(self):
         ch = self.p.getCharacteristics(uuid=btle.AssignedNumbers.deviceName)
-
         if not ch:
             raise Exception("Device name not found.")
 
