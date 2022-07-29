@@ -15,7 +15,7 @@ For optimal platform support I provide both a [Python package](lib/python/) and 
 If you want to use the Python library simply install it with `pip install miauth` - this also gives you access to the `miauth` command.
 
 A __Swift__ port of this project is available here: https://github.com/nouun/miauth  
-A __Rust__ port of the core components is available here: https://github.com/macbury/m365/tree/master/src
+A __Rust__ port is available here: https://github.com/macbury/m365/tree/master/src
 
 ## Special thanks
 This work would not have been possible without the following projects:
